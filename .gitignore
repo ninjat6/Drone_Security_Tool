@@ -210,3 +210,11 @@ __marimo__/
 # SDR / HackRF raw data
 *.bin
 *.iq
+
+
+# google earth path
+*.kml
+*.kmz
+
+
+
