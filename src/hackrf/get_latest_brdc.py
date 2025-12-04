@@ -6,12 +6,13 @@ import gzip
 import shutil
 from requests.auth import HTTPBasicAuth
 
+from utils.tool import get_project_root
+
+
 
 # ================= 設定區 =================
-# 取得目前這支程式的絕對路徑
-CURRENT_FILE_PATH = os.path.abspath(__file__)
-# 往上跳 3 層回到專案根目錄
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(CURRENT_FILE_PATH)))
+# 取得專案根目錄
+PROJECT_ROOT = get_project_root()
 # 預設存檔路徑
 DEFAULT_SAVE_DIR = os.path.join(PROJECT_ROOT, "data", "ephemeris")
 # =========================================

@@ -216,6 +216,9 @@ __marimo__/
 *.kml
 *.kmz
 
+# motion path files
+*.csv
+
 # environment variables file
 *.env
 

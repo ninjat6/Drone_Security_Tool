@@ -1,0 +1,25 @@
+[build-system]
+# 定義建置系統所需的工具
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hackrf-tools"  # 專案名稱 (只能用英文、數字、連字號)
+version = "0.1.0"
+description = "HackRF 無人機 GPS 欺騙與測試工具"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Yuan"},
+]
+
+# 自動安裝這些依賴 (這樣別人 clone 下來只要裝這個專案，套件就會自動裝好)
+dependencies = [
+    "requests",
+    "python-dotenv",
+    "numpy",
+]
+
+[tool.setuptools.packages.find]
+# 告訴 setuptools 原始碼在哪裡
+where = ["src"]

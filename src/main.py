@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tools.fetch_brdc import fetch_latest_ephemeris
+from hackrf.get_latest_brdc import fetch_latest_ephemeris
 
 
 path = fetch_latest_ephemeris()
