@@ -222,5 +222,4 @@ __marimo__/
 # environment variables file
 *.env
 
-
-
+*.lock

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hackrf-tools"  # 專案名稱 (只能用英文、數字、連字號)
 version = "0.1.0"
-description = "HackRF 無人機 GPS 欺騙與測試工具"
+description = "無人機資安檢測工具"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -18,6 +18,7 @@ dependencies = [
     "requests",
     "python-dotenv",
     "numpy",
+    "PySide6",
 ]
 
 [tool.setuptools.packages.find]
