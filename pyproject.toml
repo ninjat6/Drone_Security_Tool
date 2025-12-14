@@ -24,3 +24,12 @@ dependencies = [
 [tool.setuptools.packages.find]
 # 告訴 setuptools 原始碼在哪裡
 where = ["src"]
+
+# 用 pip
+# python -m pip install -e .
+# 若用 uv
+# uv pip install -e .
+
+# python -m src.gui.app
+# 或
+# uv run python -m src.gui.app
