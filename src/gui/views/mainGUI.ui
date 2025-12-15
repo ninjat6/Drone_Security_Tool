@@ -1,0 +1,707 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowModality">
+   <enum>Qt::WindowModality::NonModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>946</width>
+    <height>826</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>無人機檢測工具包</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+
+QSplitter::handle:hover {
+    background-color: #007acc; /* 滑鼠移上去變亮藍色 */
+    height: 4px; /* 滑鼠移上去變粗 */
+}</string>
+  </property>
+  <property name="toolButtonStyle">
+   <enum>Qt::ToolButtonStyle::ToolButtonIconOnly</enum>
+  </property>
+  <property name="tabShape">
+   <enum>QTabWidget::TabShape::Rounded</enum>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::DockOption::AllowTabbedDocks|QMainWindow::DockOption::AnimatedDocks</set>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QSplitter" name="splitter">
+      <property name="orientation">
+       <enum>Qt::Orientation::Vertical</enum>
+      </property>
+      <widget class="QTabWidget" name="tabWidget">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="sizeIncrement">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>11</pointsize>
+        </font>
+       </property>
+       <property name="layoutDirection">
+        <enum>Qt::LayoutDirection::LeftToRight</enum>
+       </property>
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QTabBar::tab {
+    min-width: 100px;
+	min-height: 30px;
+}</string>
+       </property>
+       <property name="tabPosition">
+        <enum>QTabWidget::TabPosition::North</enum>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>16</width>
+         <height>16</height>
+        </size>
+       </property>
+       <property name="elideMode">
+        <enum>Qt::TextElideMode::ElideNone</enum>
+       </property>
+       <property name="usesScrollButtons">
+        <bool>false</bool>
+       </property>
+       <widget class="QWidget" name="tab_overview">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
+        <attribute name="title">
+         <string>總覽</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout" columnstretch="1,2">
+         <item row="0" column="1">
+          <layout class="QVBoxLayout" name="verticalLayout_6">
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_4">
+             <item>
+              <widget class="QLabel" name="label_6">
+               <property name="text">
+                <string>UAV照片</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_7">
+               <property name="text">
+                <string>GCS照片</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_4">
+             <property name="text">
+              <string>上傳照片</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="0" column="0">
+          <layout class="QVBoxLayout" name="verticalLayout_5" stretch="3,1,1">
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+             <item>
+              <widget class="QLabel" name="label">
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>檢測總覽</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QTextBrowser" name="textBrowser">
+               <property name="font">
+                <font>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="html">
+                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Microsoft JhengHei UI'; font-size:11pt; font-weight:700;&quot;&gt;報告編號&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Microsoft JhengHei UI'; font-size:11pt; font-weight:700;&quot;&gt;檢測起始日期&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Microsoft JhengHei UI'; font-size:11pt; font-weight:700;&quot;&gt;檢測完成日期&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>6. 系統檢測</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QProgressBar" name="progressBar">
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="value">
+                <number>0</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="font">
+                <font>
+                 <pointsize>11</pointsize>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>7. 群飛系統安全檢測</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QProgressBar" name="progressBar_2">
+               <property name="value">
+                <number>0</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_4">
+               <property name="font">
+                <font>
+                 <pointsize>11</pointsize>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>8.1. 一般要求增項檢測</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QProgressBar" name="progressBar_3">
+               <property name="value">
+                <number>0</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_5">
+               <property name="font">
+                <font>
+                 <pointsize>11</pointsize>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>8.2. 特殊要求增項檢測</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QProgressBar" name="progressBar_4">
+               <property name="value">
+                <number>46</number>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+               <property name="textVisible">
+                <bool>true</bool>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+               <property name="invertedAppearance">
+                <bool>false</bool>
+               </property>
+               <property name="textDirection">
+                <enum>QProgressBar::Direction::TopToBottom</enum>
+               </property>
+               <property name="format">
+                <string>%p%</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QPushButton" name="pushButton_3">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>編輯專案</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_2">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>產生報告</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>產生檢測軟體
+版本報表</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_6">
+        <attribute name="title">
+         <string>6</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,5">
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item row="0" column="0">
+          <layout class="QVBoxLayout" name="verticalLayout_7">
+           <item>
+            <widget class="QPushButton" name="btn_621">
+             <property name="text">
+              <string>6.2.1 身分鑑別</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_6">
+             <property name="text">
+              <string>6.2.2 網路服務埠檢測</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_7">
+             <property name="text">
+              <string>6.2.3 系統異常流量</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_8">
+             <property name="text">
+              <string>6.3.1 惡意程式</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_10">
+             <property name="text">
+              <string>6.3.2 弱點掃描</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_9">
+             <property name="text">
+              <string>6.4.1 無線通訊安全</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_11">
+             <property name="text">
+              <string>6.5.1 韌體更新安全</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="0" column="1">
+          <widget class="QStackedWidget" name="stackedWidget">
+           <property name="frameShape">
+            <enum>QFrame::Shape::NoFrame</enum>
+           </property>
+           <widget class="QWidget" name="page"/>
+           <widget class="QWidget" name="page_2"/>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_7">
+        <attribute name="title">
+         <string>7</string>
+        </attribute>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QLabel" name="label_8">
+           <property name="font">
+            <font>
+             <pointsize>19</pointsize>
+             <bold>true</bold>
+             <kerning>true</kerning>
+            </font>
+           </property>
+           <property name="autoFillBackground">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>未開放 不想做&gt;&lt;</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_8_1">
+        <attribute name="title">
+         <string>8.1</string>
+        </attribute>
+        <widget class="QWidget" name="layoutWidget_2">
+         <property name="geometry">
+          <rect>
+           <x>100</x>
+           <y>70</y>
+           <width>511</width>
+           <height>391</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_19">
+            <property name="text">
+             <string>8.1.2 衛星定位系統干擾處理能力</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_15">
+            <property name="text">
+             <string>8.1.4 無線通訊失效處理能力</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="pushButton_21">
+            <property name="text">
+             <string>8.1.3 取得行動應用 App 基本資安標章</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pushButton_20">
+            <property name="text">
+             <string>8.1.1 衛星定位系統強化能力</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QPushButton" name="pushButton_17">
+            <property name="text">
+             <string>8.1.5 韌體已知漏洞檢測</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+       <widget class="QWidget" name="tab_8_2">
+        <attribute name="title">
+         <string>8.2</string>
+        </attribute>
+        <widget class="QWidget" name="layoutWidget_3">
+         <property name="geometry">
+          <rect>
+           <x>70</x>
+           <y>60</y>
+           <width>548</width>
+           <height>471</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_26">
+            <property name="text">
+             <string>8.2.2 無人機命令連結（command link）之認證機制</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_22">
+            <property name="text">
+             <string>8.2.4 原始碼安全掃描</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="pushButton_28">
+            <property name="text">
+             <string>8.2.3 工程除錯介面</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pushButton_27">
+            <property name="text">
+             <string>8.2.1 數據儲存安全</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QPushButton" name="pushButton_23">
+            <property name="text">
+             <string>8.2.6 軟體更新安全</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QPushButton" name="pushButton_24">
+            <property name="text">
+             <string>8.2.5 未公開揭露應用程式</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </widget>
+      <widget class="QPlainTextEdit" name="plainTextEdit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="plainText">
+        <string>
+aaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaa
+
+
+
+
+
+
+
+
+
+
+
+
+aaaaaaaaaaaa
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+aaaaaaaaaaaa
+
+
+
+
+
+
+
+
+
+
+
+
+aaaaaaaaaaaa
+
+
+
+
+
+aaaaaaaaaaaa
+aaaaaaaaaaaa
+</string>
+       </property>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>946</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>專案</string>
+    </property>
+    <addaction name="action_create"/>
+    <addaction name="action_open"/>
+   </widget>
+   <addaction name="menu"/>
+  </widget>
+  <action name="action_create">
+   <property name="text">
+    <string>新建專案</string>
+   </property>
+  </action>
+  <action name="action_open">
+   <property name="text">
+    <string>開啟</string>
+   </property>
+  </action>
+ </widget>
+ <tabstops>
+  <tabstop>pushButton_3</tabstop>
+  <tabstop>pushButton_2</tabstop>
+  <tabstop>pushButton</tabstop>
+  <tabstop>pushButton_4</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>btn_621</tabstop>
+  <tabstop>pushButton_6</tabstop>
+  <tabstop>pushButton_7</tabstop>
+  <tabstop>pushButton_8</tabstop>
+  <tabstop>pushButton_10</tabstop>
+  <tabstop>pushButton_9</tabstop>
+  <tabstop>pushButton_11</tabstop>
+  <tabstop>pushButton_20</tabstop>
+  <tabstop>pushButton_19</tabstop>
+  <tabstop>pushButton_21</tabstop>
+  <tabstop>pushButton_15</tabstop>
+  <tabstop>pushButton_17</tabstop>
+  <tabstop>pushButton_27</tabstop>
+  <tabstop>pushButton_26</tabstop>
+  <tabstop>pushButton_28</tabstop>
+  <tabstop>pushButton_22</tabstop>
+  <tabstop>pushButton_24</tabstop>
+  <tabstop>textBrowser</tabstop>
+  <tabstop>pushButton_23</tabstop>
+  <tabstop>plainTextEdit</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
