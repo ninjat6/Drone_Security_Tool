@@ -1,0 +1,261 @@
+{
+    "version": "1.8",
+    "project_meta_schema": [
+        {
+            "key": "project_name",
+            "label": "專案名稱",
+            "type": "text",
+            "required": true
+        },
+        {
+            "key": "report_id",
+            "label": "報告編號",
+            "type": "text",
+            "required": true
+        },
+        {
+            "key": "tester",
+            "label": "檢測人員",
+            "type": "text",
+            "required": true
+        },
+        {
+            "key": "start_date",
+            "label": "檢測起始日期",
+            "type": "date",
+            "required": true
+        },
+        {
+            "key": "test_scope",
+            "label": "檢測範圍",
+            "type": "checkbox_group",
+            "required": true,
+            "options": [
+                {
+                    "value": "6",
+                    "label": "6. 系統檢測"
+                },
+            {
+                    "value": "7",
+                    "label": "7. 群飛系統資安檢測"
+                },
+                {
+                    "value": "8.1",
+                    "label": "8.1. 一般要求增項"
+                },
+                {
+                    "value": "8.2",
+                    "label": "8.2. 特殊要求增項"
+                }
+            ]
+        },
+        {
+            "key": "save_path",
+            "label": "存檔位置",
+            "type": "path_selector",
+            "required": true
+        },
+        {
+            "key": "uav_photo_path",
+            "label": "UAV 照片",
+            "type": "hidden",
+            "required": false
+        },
+        {
+            "key": "gcs_photo_path",
+            "label": "GCS 照片",
+            "type": "hidden",
+            "required": false
+        }
+    ],
+    "test_standards": [
+        {
+            "section_id": "6",
+            "section_name": "6.系統檢測",
+            "items": [
+                {
+                    "id": "6.2.1",
+                    "name": "身分鑑別",
+                    "targets": [
+                        "GCS"
+                    ],
+                    "logic": "AND",
+                    "evidence_block": {
+                        "description_template": "(1) 於受測物登入介面輸入錯誤登入資訊。\n(2) 確認是否觸發鎖定機制。\n(3) 檢查通行碼複雜度。",
+                        "automation_tools": [],
+                        "photo_gallery": {
+                            "min_count": 1
+                        }
+                    },
+                    "sub_criteria": [
+                        {
+                            "id": "c1",
+                            "content": "受測物須提供身分鑑別機制。"
+                        },
+                        {
+                            "id": "c2",
+                            "content": "具有錯誤鎖定功能。"
+                        },
+                        {
+                            "id": "c3",
+                            "content": "通行碼設置規則具備高複雜度。"
+                        }
+                    ]
+                },
+                {
+                    "id": "6.2.2",
+                    "name": "網路服務埠檢測",
+                    "targets": [
+                        "GCS"
+                    ],
+                    "logic": "AND",
+                    "evidence_block": {
+                        "description_template": "掃描 GCS 網路埠。",
+                        "automation_tools": [],
+                        "photo_gallery": {
+                            "min_count": 1
+                        }
+                    },
+                    "sub_criteria": [
+                        {
+                            "id": "c1",
+                            "content": "無非預期 Port。"
+                        },
+                        {
+                            "id": "c2",
+                            "content": "僅開啟必要服務。"
+                        }
+                    ]
+                },
+                {
+                    "id": "6.2.3",
+                    "name": "系統異常流量",
+                    "targets": [
+                        "UAV",
+                        "GCS"
+                    ],
+                    "allow_share": true,
+                    "logic": "OR",
+                    "evidence_block": {
+                        "description_template": "監控網路流量是否異常。",
+                        "automation_tools": [],
+                        "photo_gallery": {
+                            "min_count": 1
+                        }
+                    },
+                    "sub_criteria": [
+                        {
+                            "id": "c1",
+                            "content": "無異常流量傳輸。"
+                        }
+                    ]
+                },
+                {
+                    "id": "6.4.1",
+                    "name": "無線通訊安全",
+                    "targets": [
+                        "UAV",
+                        "GCS"
+                    ],
+                    "allow_share": true,
+                    "logic": "AND",
+                    "evidence_block": {
+                        "description_template": "檢測無線傳輸加密機制。",
+                        "automation_tools": [],
+                        "photo_gallery": {
+                            "min_count": 1
+                        }
+                    },
+                    "sub_criteria": [
+                        {
+                            "id": "c1",
+                            "content": "使用符合規範之加密機制。"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "section_id": "7",
+            "section_name": "7.群飛系統資安檢測",
+            "items": [
+                {
+                    "id": "7.1.1",
+                    "name": "群飛系統弱點檢測",
+                    "targets": [
+                        "UAV"
+                    ],
+                    "logic": "OR",
+                    "evidence_block": {
+                        "description_template": "GPS 欺騙測試。",
+                        "automation_tools": []
+                    },
+                    "sub_criteria": [
+                        {
+                            "id": "c1",
+                            "content": "定位維持正確。"
+                        },
+                        {
+                            "id": "c2",
+                            "content": "進入安全模式(返航/降落)。"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "section_id": "8.1",
+            "section_name": "8.1.一般要求增項",
+            "items": [
+                {
+                    "id": "8.1.1",
+                    "name": "衛星定位系統強化",
+                    "targets": [
+                        "UAV"
+                    ],
+                    "logic": "OR",
+                    "evidence_block": {
+                        "description_template": "GPS 欺騙測試。",
+                        "automation_tools": []
+                    },
+                    "sub_criteria": [
+                        {
+                            "id": "c1",
+                            "content": "定位維持正確。"
+                        },
+                        {
+                            "id": "c2",
+                            "content": "進入安全模式(返航/降落)。"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "section_id": "8.2",
+            "section_name": "8.2.特殊安全要求增項",
+            "items": [
+                {
+                    "id": "8.2.1",
+                    "name": "數據儲存安全",
+                    "targets": [
+                        "UAV",
+                        "GCS"
+                    ],
+                    "allow_share": true,
+                    "logic": "AND",
+                    "evidence_block": {
+                        "description_template": "檢測儲存資料是否加密。",
+                        "automation_tools": []
+                    },
+                    "sub_criteria": [
+                        {
+                            "id": "c1",
+                            "content": "儲存內容之數據資料部分應採用 FIPS 140-2 Annex A 以上加密。"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
