@@ -13,7 +13,59 @@ from PySide6.QtWidgets import (
     QComboBox, QSizePolicy, QListWidget, QListWidgetItem
 )
 from PySide6.QtCore import Qt, QDate, QObject, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QShortcut, QKeySequence
+
+# ==========================================
+# 0. 全域常數定義 (Constants)
+# ==========================================
+
+# 檔案與目錄名稱
+CONFIG_FILENAME = "standard_config.json"
+PROJECT_SETTINGS_FILENAME = "project_settings.json"
+DIR_IMAGES = "images"
+DIR_REPORTS = "reports"
+
+# 路徑設定
+DEFAULT_DESKTOP_PATH = os.path.join(os.path.expanduser("~"), "Desktop")
+
+# 專案類型定義
+PROJECT_TYPE_FULL = "full"      # 完整專案
+PROJECT_TYPE_ADHOC = "ad_hoc"   # 各別檢測 (Ad-Hoc)
+
+# 預設值
+DEFAULT_TESTER_NAME = "QuickUser"
+DEFAULT_ADHOC_PREFIX = "ADHOC"
+
+# 日期格式
+DATE_FMT_PY_DATE = "%Y-%m-%d"
+DATE_FMT_PY_DATETIME = "%Y-%m-%d %H:%M:%S"
+DATE_FMT_PY_FILENAME = "%Y%m%d_%H%M%S"
+DATE_FMT_PY_FILENAME_SHORT = "%Y%m%d_%H%M"
+DATE_FMT_QT = "yyyy-MM-dd"
+
+# 檢測狀態字串
+STATUS_PASS = "合格 (Pass)"
+STATUS_FAIL = "不合格 (Fail)"
+STATUS_NA = "不適用 (N/A)"
+STATUS_UNCHECKED = "未判定"
+STATUS_NOT_TESTED = "未檢測"
+STATUS_UNKNOWN = "Unknown"
+
+# UI 樣式定義 (CSS Colors)
+COLOR_BG_PASS = "#d4edda"  # 淺綠
+COLOR_BG_FAIL = "#f8d7da"  # 淺紅
+COLOR_BG_NA = "#e2e3e5"    # 淺灰
+COLOR_BG_DEFAULT = "#dddddd" # 預設灰
+
+COLOR_TEXT_PASS = "#155724" # 深綠
+COLOR_TEXT_FAIL = "#721c24" # 深紅
+COLOR_TEXT_NORMAL = "#333333" # 深灰/黑
+COLOR_TEXT_WHITE = "white"
+COLOR_TEXT_GRAY = "#666666"
+
+COLOR_BTN_ACTIVE = "#2196F3" # 藍色
+COLOR_BTN_HOVER = "#1976D2"  # 深藍
+
 
 # ==========================================
 # 1. 專案管理器 (Model & Logic Core)
@@ -25,58 +77,48 @@ class ProjectManager(QObject):
         super().__init__()
         self.current_project_path = None
         self.project_data = {}
-        self.settings_filename = "project_settings.json"
-        self.std_config = {} # 儲存標準設定檔，用於邏輯判斷
+        self.settings_filename = PROJECT_SETTINGS_FILENAME
+        self.std_config = {} 
 
     def set_standard_config(self, config):
-        """注入標準設定檔，讓 Manager 能進行範圍判斷"""
         self.std_config = config
 
-    # --- 核心邏輯：範圍與可見性判斷 (Logic Separation) ---
+    # --- 核心邏輯：範圍與可見性判斷 ---
     def get_current_project_type(self):
-        return self.project_data.get("info", {}).get("project_type", "full")
+        return self.project_data.get("info", {}).get("project_type", PROJECT_TYPE_FULL)
 
     def is_item_visible(self, item_id):
-        """判斷某個測項 ID 在當前專案中是否應該顯示"""
         if not self.current_project_path: return False
         
         info = self.project_data.get("info", {})
-        p_type = info.get("project_type", "full")
+        p_type = info.get("project_type", PROJECT_TYPE_FULL)
 
-        if p_type == "ad_hoc":
-            # Ad-Hoc 模式：只顯示白名單內的項目
+        if p_type == PROJECT_TYPE_ADHOC:
             whitelist = info.get("target_items", [])
             return item_id in whitelist
         else:
-            # 完整模式：檢查該項目所屬的 Section 是否在 Scope 中
-            # 這裡需要反查 Item ID 屬於哪個 Section (透過 std_config)
             scope = info.get("test_scope", [])
-            # 兼容舊版：若無 scope 則預設全開
             if not scope and "test_scope" not in info: return True 
             
             section_id = self._find_section_id_by_item(item_id)
             return section_id in scope
 
     def is_section_visible(self, section_id):
-        """判斷某個章節是否應該顯示"""
         if not self.current_project_path: return False
         
         info = self.project_data.get("info", {})
-        p_type = info.get("project_type", "full")
+        p_type = info.get("project_type", PROJECT_TYPE_FULL)
 
-        if p_type == "ad_hoc":
-            # Ad-Hoc 模式：若該章節下有任何一個 Item 在白名單內，該章節就要顯示
+        if p_type == PROJECT_TYPE_ADHOC:
             whitelist = info.get("target_items", [])
             section_items = self._get_items_in_section(section_id)
             return any(item['id'] in whitelist for item in section_items)
         else:
-            # 完整模式：直接檢查 Scope
             scope = info.get("test_scope", [])
             if not scope and "test_scope" not in info: return True
             return str(section_id) in scope
 
     def _find_section_id_by_item(self, item_id):
-        """輔助：從設定檔反查 Section ID"""
         for sec in self.std_config.get("test_standards", []):
             for item in sec['items']:
                 if item['id'] == item_id:
@@ -84,7 +126,6 @@ class ProjectManager(QObject):
         return ""
 
     def _get_items_in_section(self, section_id):
-        """輔助：取得某章節下的所有 Item 定義"""
         for sec in self.std_config.get("test_standards", []):
             if str(sec['section_id']) == str(section_id):
                 return sec['items']
@@ -102,9 +143,8 @@ class ProjectManager(QObject):
         target_folder = os.path.join(base_path, project_name)
         final_path = self._get_unique_path(target_folder)
         
-        # 標記為完整專案
         form_data['project_name'] = os.path.basename(final_path)
-        form_data['project_type'] = "full" 
+        form_data['project_type'] = PROJECT_TYPE_FULL 
 
         self.project_data = {
             "version": "2.0",
@@ -114,65 +154,44 @@ class ProjectManager(QObject):
 
         return self._init_folder_and_save(final_path)
 
-    # --- 1.2 建立各別檢測專案 (Ad-Hoc) [動態生成版] ---
+    # --- 1.2 建立各別檢測專案 (Ad-Hoc) ---
     def create_ad_hoc_project(self, selected_items: list, save_base_path: str) -> tuple[bool, str]:
-        """
-        建立一個微型專案資料夾。
-        欄位生成邏輯改為動態讀取 schema，不再寫死欄位名稱。
-        """
-        ts_str = datetime.now().strftime("%Y%m%d_%H%M")
+        ts_str = datetime.now().strftime(DATE_FMT_PY_FILENAME_SHORT)
         folder_name = f"QuickTest_{ts_str}"
         target_folder = os.path.join(save_base_path, folder_name)
         final_path = self._get_unique_path(target_folder)
 
-        # 1. 初始化 Info (動態生成)
         info_data = {}
-        
-        # 從 config 讀取 schema，如果沒有就用空列表防止報錯
         schema = self.std_config.get("project_meta_schema", [])
 
         for field in schema:
             key = field.get('key')
             f_type = field.get('type')
             
-            # 根據 Key 做特殊處理 (優先級最高)
             if key == "project_name":
                 info_data[key] = os.path.basename(final_path)
                 continue
             
-            # 根據 Type 做智慧預設值填入
             if f_type == "date":
-                # 自動填入今日日期
-                info_data[key] = datetime.now().strftime("%Y-%m-%d")
-            
+                info_data[key] = datetime.now().strftime(DATE_FMT_PY_DATE)
             elif f_type == "checkbox_group":
-                # 複選框預設為空列表
                 info_data[key] = []
-                
             elif f_type == "path_selector":
-                # 路徑選擇器預設為空字串
                 info_data[key] = ""
-                
             elif f_type == "text":
-                # 文字欄位：根據 key 的語意給予「智慧預設值」
                 key_lower = key.lower()
                 if "id" in key_lower or "no" in key_lower:
-                    info_data[key] = f"ADHOC-{ts_str}"  # 自動生成 ID
+                    info_data[key] = f"{DEFAULT_ADHOC_PREFIX}-{ts_str}"
                 elif "tester" in key_lower or "user" in key_lower:
-                    info_data[key] = "QuickUser"         # 預設測試員
+                    info_data[key] = DEFAULT_TESTER_NAME
                 else:
-                    info_data[key] = "-"                 # 其他文字欄位給 dash
-            
+                    info_data[key] = "-"
             else:
-                # 其他未定義類型
                 info_data[key] = ""
 
-        # 2. 寫入系統必要欄位 (System Critical Fields)
-        # 這些是程式邏輯運作必須的，不管 Schema 有沒有定義都要寫入
-        info_data["project_type"] = "ad_hoc"   # 標記為各別檢測
-        info_data["target_items"] = selected_items # 記錄測項白名單
+        info_data["project_type"] = PROJECT_TYPE_ADHOC
+        info_data["target_items"] = selected_items
 
-        # 3. 組合最終資料
         self.project_data = {
             "version": "2.0",
             "info": info_data,
@@ -195,8 +214,8 @@ class ProjectManager(QObject):
     def _init_folder_and_save(self, path):
         try:
             os.makedirs(path, exist_ok=True)
-            os.makedirs(os.path.join(path, "images"), exist_ok=True)
-            os.makedirs(os.path.join(path, "reports"), exist_ok=True)
+            os.makedirs(os.path.join(path, DIR_IMAGES), exist_ok=True)
+            os.makedirs(os.path.join(path, DIR_REPORTS), exist_ok=True)
             
             self.current_project_path = path
             self.save_all()
@@ -217,11 +236,11 @@ class ProjectManager(QObject):
             return False, f"讀取失敗: {e}"
 
     # --- 1.3 檔案匯入 ---
-    def import_file(self, src_path: str, sub_folder: str = "images") -> str:
+    def import_file(self, src_path: str, sub_folder: str = DIR_IMAGES) -> str:
         if not self.current_project_path: return None
         try:
             filename = os.path.basename(src_path)
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            ts = datetime.now().strftime(DATE_FMT_PY_FILENAME)
             new_filename = f"{ts}_{filename}"
             
             target_dir = os.path.join(self.current_project_path, sub_folder)
@@ -239,8 +258,7 @@ class ProjectManager(QObject):
     def merge_external_project(self, source_folder: str) -> tuple[bool, str]:
         if not self.current_project_path: return False, "請先開啟主專案"
         
-        # 邏輯檢查：只有 Full 專案可以合併別人
-        if self.get_current_project_type() != "full":
+        if self.get_current_project_type() != PROJECT_TYPE_FULL:
             return False, "目前開啟的不是完整專案，無法執行合併動作。"
 
         source_json_path = os.path.join(source_folder, self.settings_filename)
@@ -251,11 +269,11 @@ class ProjectManager(QObject):
                 source_data = json.load(f)
             
             src_info = source_data.get("info", {})
-            if src_info.get("project_type") != "ad_hoc":
+            if src_info.get("project_type") != PROJECT_TYPE_ADHOC:
                 return False, "錯誤：來源資料夾是一個「完整專案」，不允許合併！\n只能合併「各別檢測專案」。"
 
             # 搬移檔案
-            for sub in ["images", "reports"]:
+            for sub in [DIR_IMAGES, DIR_REPORTS]:
                 src_sub_dir = os.path.join(source_folder, sub)
                 if not os.path.exists(src_sub_dir): continue
                 
@@ -302,7 +320,7 @@ class ProjectManager(QObject):
         if test_id not in self.project_data["tests"]: self.project_data["tests"][test_id] = {}
         
         self.project_data["tests"][test_id][target] = result_data
-        self.project_data["tests"][test_id][target]["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.project_data["tests"][test_id][target]["last_updated"] = datetime.now().strftime(DATE_FMT_PY_DATETIME)
         
         self.project_data["tests"][test_id].setdefault("__meta__", {})["is_shared"] = is_shared
         self.save_all(); self.data_changed.emit()
@@ -325,14 +343,14 @@ class ProjectManager(QObject):
         item_data = self.project_data.get("tests", {}).get(test_id, {})
         status_map = {}
         for t in targets:
-            if t not in item_data: status_map[t] = "未檢測"
+            if t not in item_data: status_map[t] = STATUS_NOT_TESTED
             else:
-                res = item_data[t].get("result", "未判定")
-                if "未判定" in res: status_map[t] = "未檢測"
-                elif "合格" in res and "不" not in res: status_map[t] = "Pass"
-                elif "不合格" in res: status_map[t] = "Fail"
-                elif "不適用" in res: status_map[t] = "N/A"
-                else: status_map[t] = "Unknown"
+                res = item_data[t].get("result", STATUS_UNCHECKED)
+                if STATUS_UNCHECKED in res: status_map[t] = STATUS_NOT_TESTED
+                elif STATUS_PASS in res: status_map[t] = "Pass"
+                elif STATUS_FAIL in res: status_map[t] = "Fail"
+                elif STATUS_NA in res: status_map[t] = "N/A"
+                else: status_map[t] = STATUS_UNKNOWN
         return status_map
 
     def is_test_fully_completed(self, item_config):
@@ -341,12 +359,12 @@ class ProjectManager(QObject):
         saved = self.project_data.get("tests", {}).get(test_id, {})
         for t in targets:
             if t not in saved: return False
-            if "未判定" in saved[t].get("result", "未判定"): return False
+            if STATUS_UNCHECKED in saved[t].get("result", STATUS_UNCHECKED): return False
         return True
 
 
 # ==========================================
-# 2. 各別檢測選擇器 (Quick Test Dialog) - 已修復
+# 2. 各別檢測選擇器 (Quick Test Dialog)
 # ==========================================
 class QuickTestSelector(QDialog):
     def __init__(self, parent, config):
@@ -361,7 +379,6 @@ class QuickTestSelector(QDialog):
         layout.addWidget(QLabel("請勾選本次要進行檢測的項目："))
         self.list_widget = QListWidget()
         
-        # 動態讀取 config 生成列表
         for section in self.config.get("test_standards", []):
             header = QListWidgetItem(f"--- {section['section_name']} ---")
             header.setFlags(Qt.NoItemFlags) 
@@ -375,9 +392,8 @@ class QuickTestSelector(QDialog):
         
         layout.addWidget(self.list_widget)
         
-        # 路徑選擇
         path_layout = QHBoxLayout()
-        self.path_edit = QLineEdit(os.path.join(os.path.expanduser("~"), "Desktop"))
+        self.path_edit = QLineEdit(DEFAULT_DESKTOP_PATH)
         btn_browse = QPushButton("...")
         btn_browse.clicked.connect(self._browse)
         path_layout.addWidget(QLabel("儲存位置:"))
@@ -403,7 +419,6 @@ class QuickTestSelector(QDialog):
         return selected, self.path_edit.text()
 
     def run(self):
-        """標準化執行方法，類似 Controller"""
         if self.exec() == QDialog.Accepted:
             return self.get_data()
         return None, None
@@ -426,7 +441,7 @@ class ProjectFormController:
     def _init_ui(self):
         layout = QVBoxLayout(self.dialog)
         form = QFormLayout()
-        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+        desktop = DEFAULT_DESKTOP_PATH
 
         for field in self.meta_schema:
             key = field['key']
@@ -441,7 +456,7 @@ class ProjectFormController:
                 if self.is_edit_mode and key in self.existing_data:
                     widget.setText(str(self.existing_data[key]))
                     if key == "project_name": 
-                        widget.setReadOnly(True); 
+                        widget.setReadOnly(True)
                         widget.setStyleSheet("background-color:#f0f0f0;")
 
             elif f_type == 'date': 
@@ -449,7 +464,7 @@ class ProjectFormController:
                 widget.setCalendarPopup(True)
                 if self.is_edit_mode and key in self.existing_data:
                     widget.setDate(
-                        QDate.fromString(self.existing_data[key], "yyyy-MM-dd")
+                        QDate.fromString(self.existing_data[key], DATE_FMT_QT)
                     )
                 else: widget.setDate(QDate.currentDate())
 
@@ -477,8 +492,10 @@ class ProjectFormController:
                 v = QVBoxLayout(widget)
                 v.setContentsMargins(5,5,5,5)
                 opts = field.get("options", [])
-                chks = []
                 vals = self.existing_data.get(key, []) if self.is_edit_mode else []
+                
+                widget.checkboxes = [] 
+                
                 for o in opts:
                     chk = QCheckBox(o['label'])
                     chk.setProperty("val", o['value'])
@@ -487,8 +504,8 @@ class ProjectFormController:
                             chk.setChecked(True)
                     else: 
                         chk.setChecked(True)
-                    v.addWidget(chk); chks.append(chk)
-                widget.checkboxes = chks
+                    v.addWidget(chk)
+                    widget.checkboxes.append(chk)
 
             if widget: 
                 form.addRow(label, widget)
@@ -500,8 +517,15 @@ class ProjectFormController:
         layout.addWidget(btns)
         
     def _browse(self, le):
-        d = QFileDialog.getExistingDirectory(self.dialog, "選擇資料夾")
-        if d: le.setText(d)
+        dialog = QFileDialog(self.dialog, "選擇資料夾")
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+        dialog.setWindowModality(Qt.ApplicationModal)
+        
+        if dialog.exec() == QDialog.Accepted:
+            files = dialog.selectedFiles()
+            if files:
+                le.setText(files[0])
             
     def run(self):
         if self.dialog.exec() == QDialog.Accepted: return self._collect()
@@ -512,16 +536,13 @@ class ProjectFormController:
         for key, inf in self.inputs.items():
             w = inf['w']; t = inf['t']
             if t == 'text': data[key] = w.text()
-            elif t == 'date': data[key] = w.date().toString("yyyy-MM-dd")
+            elif t == 'date': data[key] = w.date().toString(DATE_FMT_QT)
             elif t == 'path_selector': data[key] = w.line_edit.text()
             elif t == 'checkbox_group': data[key] = [c.property("val") for c in w.checkboxes if c.isChecked()]
         return data
 
 # ==========================================
-# 4. 總覽頁面 (Overview) - 使用 ProjectManager 邏輯
-# ==========================================
-# ==========================================
-# 4. 總覽頁面 (Overview) - 動態欄位版
+# 4. 總覽頁面 (Overview) - 捲動版
 # ==========================================
 class OverviewPage(QWidget):
     def __init__(self, pm, config):
@@ -531,15 +552,27 @@ class OverviewPage(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.layout = QVBoxLayout(self)
+        # 1. 最外層垂直佈局
+        main_layout = QVBoxLayout(self)
+        
+        # 2. 建立捲動區域
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True) # 重要：讓內容寬度自適應
+        
+        # 3. 建立內容容器 Widget
+        content_widget = QWidget()
+        
+        # 4. 內容 Widget 的佈局 (這裡放原本的那些 GroupBox)
+        self.layout = QVBoxLayout(content_widget)
 
-        # 1. 專案資訊區塊 (改為動態生成)
+        # --- 原本的 UI 內容 ---
+        # 專案資訊區塊
         self.info_group = QGroupBox("專案資訊")
         self.info_layout = QFormLayout()
         self.info_group.setLayout(self.info_layout)
         self.layout.addWidget(self.info_group)
 
-        # 2. 受測物照片區塊 (保持不變，因為這涉及特定 UI 操作邏輯)
+        # 受測物照片區塊
         photo_g = QGroupBox("受測物照片")
         h = QHBoxLayout()
         self.img_uav = self._mk_img_lbl()
@@ -556,12 +589,17 @@ class OverviewPage(QWidget):
         photo_g.setLayout(h)
         self.layout.addWidget(photo_g)
 
-        # 3. 檢測進度區塊 (保持不變)
+        # 檢測進度區塊
         self.prog_g = QGroupBox("檢測進度")
         self.prog_l = QVBoxLayout()
         self.prog_g.setLayout(self.prog_l)
         self.layout.addWidget(self.prog_g)
         self.layout.addStretch()
+        # ---------------------
+
+        # 5. 將內容放入捲動區，再將捲動區放入主佈局
+        scroll.setWidget(content_widget)
+        main_layout.addWidget(scroll)
 
     def _mk_img_lbl(self):
         l = QLabel("無照片"); l.setFrameShape(QFrame.Box); l.setFixedSize(200, 150)
@@ -570,44 +608,32 @@ class OverviewPage(QWidget):
     def refresh_data(self):
         if not self.pm.current_project_path: return
         
-        # 取得資料
         info_data = self.pm.project_data.get("info", {})
         schema = self.config.get("project_meta_schema", [])
 
-        # --- A. 動態更新文字資訊區塊 ---
-        # 1. 先清空舊的欄位
+        # A. 更新資訊文字
         while self.info_layout.count():
             child = self.info_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+            if child.widget(): child.widget().deleteLater()
 
-        # 2. 根據 Schema 重新長出欄位
         for field in schema:
-            # 檢查是否有設定 "show_in_overview": true
             if field.get("show_in_overview", False):
                 key = field['key']
                 label_text = field['label']
-                
-                # 從資料中取值，若無則顯示 '-'
                 value = info_data.get(key, "-")
-                
-                # 特殊處理：如果是列表 (例如 Checkbox group)，轉成逗號分隔字串
                 if isinstance(value, list):
                     value = ", ".join(value)
                 
-                # 建立 Label 並設定樣式
                 val_label = QLabel(str(value))
                 val_label.setStyleSheet("font-weight: bold; color: #333;")
-                val_label.setTextInteractionFlags(Qt.TextSelectableByMouse) # 讓文字可複製
-                
+                val_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
                 self.info_layout.addRow(f"{label_text}:", val_label)
 
-
-        # --- B. 更新照片 (保持原樣) ---
+        # B. 更新照片
         self._load_img(info_data.get("uav_photo_path"), self.img_uav)
         self._load_img(info_data.get("gcs_photo_path"), self.img_gcs)
 
-        # --- C. 更新進度條 (保持原樣) ---
+        # C. 更新進度
         while self.prog_l.count(): 
             child = self.prog_l.takeAt(0)
             child.widget().deleteLater() if child.widget() else None
@@ -615,7 +641,6 @@ class OverviewPage(QWidget):
         for section in self.config.get("test_standards", []):
             sec_id = section['section_id']
             sec_name = section['section_name']
-            
             is_visible = self.pm.is_section_visible(sec_id)
 
             h = QHBoxLayout(); lbl = QLabel(sec_name); lbl.setFixedWidth(150); p = QProgressBar()
@@ -623,7 +648,6 @@ class OverviewPage(QWidget):
             if is_visible:
                 items = section['items']
                 active_items = [i for i in items if self.pm.is_item_visible(i['id'])]
-                
                 total = len(active_items)
                 done = sum(1 for i in active_items if self.pm.is_test_fully_completed(i))
                 
@@ -634,7 +658,7 @@ class OverviewPage(QWidget):
                     p.setRange(0, 100); p.setValue(0); p.setFormat("無項目")
             else:
                 p.setRange(0, 100); p.setValue(0); p.setFormat("不適用 (N/A)")
-                p.setStyleSheet("QProgressBar { color: gray; background-color: #f0f0f0; }")
+                p.setStyleSheet(f"QProgressBar {{ color: gray; background-color: {COLOR_BG_DEFAULT}; }}")
                 lbl.setStyleSheet("color: gray;")
 
             h.addWidget(lbl); h.addWidget(p); w = QWidget(); w.setLayout(h); self.prog_l.addWidget(w)
@@ -649,7 +673,7 @@ class OverviewPage(QWidget):
         if not self.pm.current_project_path: return
         f, _ = QFileDialog.getOpenFileName(self, "選圖", "", "Images (*.png *.jpg)")
         if f:
-            rel = self.pm.import_file(f, "images")
+            rel = self.pm.import_file(f, DIR_IMAGES)
             if rel: self.pm.update_info({f"{type_}_photo_path": rel})
 
 # ==========================================
@@ -688,7 +712,13 @@ class SingleTargetTestWidget(QWidget):
         self.current_report_path = None 
 
         g3 = QGroupBox("判定"); h3 = QHBoxLayout(); h3.addWidget(QLabel("結果:"))
-        self.combo = QComboBox(); self.combo.addItems(["未判定", "合格 (Pass)", "不合格 (Fail)", "不適用 (N/A)"])
+        self.combo = QComboBox()
+        self.combo.addItems([
+            STATUS_UNCHECKED, 
+            STATUS_PASS, 
+            STATUS_FAIL, 
+            STATUS_NA
+        ])
         self.combo.currentTextChanged.connect(self.update_color); h3.addWidget(self.combo)
         g3.setLayout(h3); l.addWidget(g3); l.addStretch()
 
@@ -700,7 +730,7 @@ class SingleTargetTestWidget(QWidget):
             QMessageBox.warning(self, "警告", "請先建立專案"); return
         f, _ = QFileDialog.getOpenFileName(self, "選擇報告", "", "Files (*.pdf *.html *.txt)")
         if f:
-            rel_path = self.pm.import_file(f, "reports")
+            rel_path = self.pm.import_file(f, DIR_REPORTS)
             if rel_path:
                 self.current_report_path = rel_path
                 self.lbl_file.setText(os.path.basename(rel_path))
@@ -710,13 +740,16 @@ class SingleTargetTestWidget(QWidget):
         checked = sum(1 for c in self.checks.values() if c.isChecked())
         total = len(self.checks)
         is_pass = (checked == total) if self.logic == "AND" else (checked > 0)
-        self.combo.setCurrentText("合格 (Pass)" if is_pass else "不合格 (Fail)")
+        self.combo.setCurrentText(STATUS_PASS if is_pass else STATUS_FAIL)
 
     def update_color(self, t):
         s = ""
-        if "合格" in t and "不" not in t: s = "background-color: #d4edda; color: #155724;"
-        elif "不合格" in t: s = "background-color: #f8d7da; color: #721c24;"
-        elif "不適用" in t: s = "background-color: #e2e3e5;"
+        if STATUS_PASS in t: 
+            s = f"background-color: {COLOR_BG_PASS}; color: {COLOR_TEXT_PASS};"
+        elif STATUS_FAIL in t: 
+            s = f"background-color: {COLOR_BG_FAIL}; color: {COLOR_TEXT_FAIL};"
+        elif STATUS_NA in t: 
+            s = f"background-color: {COLOR_BG_NA};"
         self.combo.setStyleSheet(s)
 
     def on_save(self):
@@ -745,7 +778,7 @@ class SingleTargetTestWidget(QWidget):
             for k, v in data.get("criteria", {}).items():
                 if k in self.checks: 
                     self.checks[k].blockSignals(True); self.checks[k].setChecked(v); self.checks[k].blockSignals(False)
-            res = data.get("result", "未判定")
+            res = data.get("result", STATUS_UNCHECKED)
             idx = self.combo.findText(res)
             if idx >= 0: self.combo.setCurrentIndex(idx)
             self.update_color(res)
@@ -753,7 +786,6 @@ class SingleTargetTestWidget(QWidget):
             if rp:
                 self.current_report_path = rp
                 self.lbl_file.setText(os.path.basename(rp))
-
 
 # ==========================================
 # 6. 通用頁面 (Container)
@@ -770,7 +802,6 @@ class UniversalTestPage(QWidget):
         l = QVBoxLayout(self)
         h = QHBoxLayout(); h.addWidget(QLabel(f"<h2>{self.config['name']}</h2>")); l.addLayout(h)
         self.chk = None
-        # if len(self.targets) > 1 and self.allow_share:
         if len(self.targets) > 1:
             self.chk = QCheckBox("共用結果"); self.chk.setStyleSheet("color: blue; font-weight: bold;")
             self.chk.toggled.connect(self.on_share); h.addStretch(); h.addWidget(self.chk)
@@ -801,21 +832,23 @@ class UniversalTestPage(QWidget):
         for t in self.targets: self.pm.update_test_result(self.config['id'], t, data, is_shared=True)
         QMessageBox.information(self, "成功", "共用儲存完成")
 
-
 # ==========================================
 # 7. 主程式 (MainApp)
 # ==========================================
 class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("無人機資安檢測工具 v1.0")
+        self.setWindowTitle("無人機資安檢測工具 v1.4 (Zoom + Scroll Fixed)")
         self.resize(1000, 750)
         self.config = self._load_config()
         self.pm = ProjectManager()
-        self.pm.set_standard_config(self.config) # 注入 config
+        self.pm.set_standard_config(self.config) 
         
         self.pm.data_changed.connect(self.refresh_ui)
         self.test_ui_elements = {}
+        
+        # 初始字體大小
+        self.current_font_size = 10 
 
         self.cw = QWidget(); self.setCentralWidget(self.cw); self.main_l = QVBoxLayout(self.cw)
         self._init_menu()
@@ -826,33 +859,48 @@ class MainApp(QMainWindow):
         self.tabs.addTab(self.overview, "總覽 Overview")
         self._init_tabs()
         self._set_enabled(False)
+        self._init_zoom()
+
+    def _init_zoom(self):
+        self.shortcut_zoom_in = QShortcut(QKeySequence.ZoomIn, self)
+        self.shortcut_zoom_in.activated.connect(self.zoom_in)
+
+        # 有時候 "Ctrl +" 需要用 "=" 來觸發
+        self.shortcut_zoom_in_alt = QShortcut(QKeySequence("Ctrl+="), self)
+        self.shortcut_zoom_in_alt.activated.connect(self.zoom_in)
+
+        self.shortcut_zoom_out = QShortcut(QKeySequence.ZoomOut, self)
+        self.shortcut_zoom_out.activated.connect(self.zoom_out)
+
+    def zoom_in(self):
+        if self.current_font_size < 30:
+            self.current_font_size += 2
+            self.update_font()
+
+    def zoom_out(self):
+        if self.current_font_size > 8:
+            self.current_font_size -= 2
+            self.update_font()
+
+    def update_font(self):
+        # 設定全域樣式表，強制所有 QWidget 使用此大小
+        # 這是解決 "有些字體不會變" 最強硬有效的方法
+        QApplication.instance().setStyleSheet(f"QWidget {{ font-size: {self.current_font_size}pt; }}")
 
     def _load_config(self):
-        """
-        測試版設定檔讀取：
-        1. 使用相對路徑 "standard_config.json" (依賴終端機執行位置)
-        2. 保留語法檢查 (JSONDecodeError)
-        """
-        # --- 修改點：改回相對路徑 ---
-        # 這樣會去抓您「執行 python 指令的資料夾」下的檔案
-        json_path = "standard_config.json"
+        json_path = CONFIG_FILENAME
         
-        # 定義如果失敗要回傳的「安全空值」
         fallback_cfg = {"test_standards": [], "project_meta_schema": []}
 
-        # 1. 檢查檔案是否存在
         if not os.path.exists(json_path):
-            # 貼心提示：印出目前的執行目錄，讓您知道程式是在哪裡找檔案
             cwd = os.getcwd()
             QMessageBox.critical(self, "設定檔遺失", f"在當前執行目錄找不到設定檔：\n{json_path}\n\n目前執行目錄 (CWD) 為：\n{cwd}")
             return fallback_cfg
 
         try:
-            # 2. 嘗試讀取並解析 JSON
             with open(json_path, "r", encoding='utf-8-sig') as f:
                 cfg = json.load(f)
             
-            # 3. 檢查必要欄位
             required_keys = ["project_meta_schema", "test_standards"]
             missing_keys = [k for k in required_keys if k not in cfg]
             
@@ -862,7 +910,6 @@ class MainApp(QMainWindow):
             return cfg
 
         except json.JSONDecodeError as e:
-            # 捕捉格式錯誤，方便您除錯 JSON
             error_msg = (
                 f"設定檔 (JSON) 格式錯誤！\n\n"
                 f"錯誤位置：第 {e.lineno} 行, 第 {e.colno} 字元\n"
@@ -885,7 +932,6 @@ class MainApp(QMainWindow):
         self.a_merge = t_menu.addAction("匯入各別檢測結果", self.on_merge); self.a_merge.setEnabled(False)
 
     def _init_tabs(self):
-        """根據 JSON 動態建立 Tabs，這裡不處理隱藏邏輯，只負責建立 UI"""
         for sec in self.config.get("test_standards", []):
             p = QWidget(); v = QVBoxLayout(p)
             v.addWidget(QLabel(f"<h3>{sec['section_name']}</h3>"))
@@ -902,7 +948,7 @@ class MainApp(QMainWindow):
                 rh.addWidget(btn); rh.addWidget(st_cont); cv.addWidget(row)
                 self.test_ui_elements[item['id']] = (btn, st_l, item, row)
             cv.addStretch()
-            self.tabs.addTab(p, sec['section_id']) # Tab 標題之後會被 update_tab_visibility 更新
+            self.tabs.addTab(p, sec['section_id'])
 
     def refresh_ui(self):
         self.overview.refresh_data()
@@ -913,7 +959,7 @@ class MainApp(QMainWindow):
         self.a_edit.setEnabled(has_proj)
         
         info = self.pm.project_data.get("info", {})
-        is_full = info.get("project_type", "full") == "full"
+        is_full = info.get("project_type", PROJECT_TYPE_FULL) == PROJECT_TYPE_FULL
         self.a_merge.setEnabled(has_proj and is_full)
         
         pname = info.get("project_name", "")
@@ -921,20 +967,19 @@ class MainApp(QMainWindow):
         self.setWindowTitle(f"無人機資安檢測工具 - {pname} ({ptype})")
 
     def update_status(self):
-        """更新所有按鈕的狀態與顏色，並根據 Manager 決定顯示與否"""
         for tid, (btn, layout, conf, row) in self.test_ui_elements.items():
             
-            # 【關鍵】UI 不做邏輯判斷，直接問 PM：這個 ID 該不該顯示？
             if not self.pm.is_item_visible(tid):
                 row.hide()
                 continue
             else:
                 row.show()
 
-            # 更新狀態顏色
             status_map = self.pm.get_test_status_detail(conf)
-            is_any = any(s != "未檢測" for s in status_map.values())
-            btn.setStyleSheet("QPushButton { background-color: #2196F3; color: white; font-weight: bold; } QPushButton:hover { background-color: #1976D2; }" if is_any else "")
+            is_any = any(s != STATUS_NOT_TESTED for s in status_map.values())
+            
+            # 移除寫死的 font-size
+            btn.setStyleSheet(f"QPushButton {{ background-color: {COLOR_BTN_ACTIVE}; color: white; font-weight: bold; }} QPushButton:hover {{ background-color: {COLOR_BTN_HOVER}; }}" if is_any else "")
             
             while layout.count(): layout.takeAt(0).widget().deleteLater()
             
@@ -942,22 +987,24 @@ class MainApp(QMainWindow):
             for t, s in status_map.items():
                 lbl = QLabel(f"{t}: {s}" if cnt > 1 else s)
                 lbl.setAlignment(Qt.AlignCenter); lbl.setFixedHeight(30)
-                c = "#dddddd"; tc = "#666666"
-                if s == "Pass": c="#4CAF50"; tc="white"
-                elif s == "Fail": c="#F44336"; tc="white"
-                elif s == "N/A": c="#9E9E9E"; tc="white"
-                lbl.setStyleSheet(f"background-color:{c}; color:{tc}; border-radius:4px; font-weight:bold; font-size:12px;")
+                
+                # Badge 顏色邏輯
+                c = COLOR_BG_DEFAULT
+                tc = COLOR_TEXT_GRAY
+                if s == "Pass": c = COLOR_BG_PASS; tc = COLOR_TEXT_PASS
+                elif s == "Fail": c = COLOR_BG_FAIL; tc = COLOR_TEXT_FAIL
+                elif s == "N/A": c = COLOR_BG_NA; tc = COLOR_TEXT_WHITE 
+                
+                # 移除寫死的 font-size
+                lbl.setStyleSheet(f"background-color:{c}; color:{tc}; border-radius:4px; font-weight:bold;")
                 layout.addWidget(lbl)
 
     def update_tab_visibility(self):
-        """更新 Tabs 的可用性"""
         if not self.pm.current_project_path: return
 
         for i, sec in enumerate(self.config.get("test_standards", [])):
-            t_idx = i + 1 # 0 是 Overview
+            t_idx = i + 1 
             sec_id = sec['section_id']
-            
-            # 【關鍵】直接問 PM 這個 Section 該不該顯示
             is_visible = self.pm.is_section_visible(sec_id)
 
             self.tabs.setTabEnabled(t_idx, is_visible)
@@ -978,13 +1025,18 @@ class MainApp(QMainWindow):
             else: QMessageBox.warning(self, "Fail", r)
 
     def on_open(self):
-        d = QFileDialog.getExistingDirectory(self, "選專案")
-        if d:
-            ok, m = self.pm.load_project(d)
-            if ok: 
-                # QMessageBox.information(self, "OK", "讀取成功")
-                self.project_ready()
-            else: QMessageBox.warning(self, "Fail", m)
+        dialog = QFileDialog(self, "選專案")
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+        dialog.setWindowModality(Qt.ApplicationModal)
+        
+        if dialog.exec() == QDialog.Accepted:
+            selected_files = dialog.selectedFiles()
+            if selected_files:
+                d = selected_files[0]
+                ok, m = self.pm.load_project(d)
+                if ok: self.project_ready()
+                else: QMessageBox.warning(self, "Fail", m)
 
     def on_edit(self):
         if not self.pm.current_project_path: return
@@ -996,7 +1048,6 @@ class MainApp(QMainWindow):
 
     def on_adhoc(self):
         d = QuickTestSelector(self, self.config)
-        # 【關鍵修復】使用 run() 方法（內部封裝 exec()），確保對話框彈出
         selected, path = d.run() 
         if selected and path:
             ok, r = self.pm.create_ad_hoc_project(selected, path)
