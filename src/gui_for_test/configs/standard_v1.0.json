@@ -125,7 +125,7 @@
                         "criteria": "符合下列項目者為通過，否則為未通過\n受測物所開啟之網路服務與對應埠，與送測資料之內容相符。"
                     },
                     "handler": {
-                        "class_name": "BaseTestTool"
+                        "class_name": ""
                     },
                     "checklist": [
                         {

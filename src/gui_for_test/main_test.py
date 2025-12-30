@@ -53,8 +53,9 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QHeaderView,
     QInputDialog,
+    QStatusBar,
 )
-from PySide6.QtCore import Qt, QDate, QObject, Signal, Slot, QUrl
+from PySide6.QtCore import Qt, QDate, QObject, Signal, Slot, QUrl, QSize
 from PySide6.QtGui import QPixmap, QShortcut, QKeySequence, QImage, QDesktopServices
 
 # ==============================================================================
@@ -362,8 +363,13 @@ class PhotoServer(QObject):
 class BaseTestTool(QObject):
     """
     通用檢測工具 (Universal Test Tool)：
-    1. 內建 UI：顯示規範敘述、檢查表、備註欄。
-    2. 內建邏輯：支援 AND/OR 判定、自動換行 Checkbox、自動生成未通過原因。
+    角色：這是「測項的具體內容與邏輯」。
+    職責：
+        顯示規範文字 (Narrative)。
+        產生 Checkbox 列表。
+        執行自動判定邏輯 (AND/OR)。
+        生成自動備註文字。
+    特點：它不管存檔、不管上傳照片，它只管「測試內容本身」。
     """
     data_updated = Signal(dict)
     status_changed = Signal(str) 
@@ -558,6 +564,8 @@ class BaseTestTool(QObject):
         
         # 2. 回填文字
         self.user_note.setPlainText(data.get("description", ""))
+
+    
 
 class ToolFactory:
     @staticmethod
@@ -775,18 +783,21 @@ class ProjectManager(QObject):
             elif status == "MATCH":
                 new_tests_data[uid] = old_tests_data[uid].copy()
             elif status == "RESET":
-                old_entry = old_tests_data[uid]
-                new_entry = {}
-                for target in TARGETS:
-                    if target in old_entry:
-                        new_entry[target] = {}
-                        if "report_path" in old_entry[target]:
-                            new_entry[target]["report_path"] = old_entry[target][
-                                "report_path"
-                            ]
-                        new_entry[target]["result"] = STATUS_UNCHECKED
-                        new_entry[target]["criteria_version_snapshot"] = new_ver
-                new_tests_data[uid] = new_entry
+                if uid in old_tests_data:
+                    old_entry = old_tests_data[uid]
+                    new_entry = {}
+                    for target in TARGETS:
+                        if target in old_entry:
+                            new_entry[target] = {}
+                            new_entry[target]["attachments"] = old_entry[target].get("attachments", [])
+                            new_entry[target]["result"] = STATUS_UNCHECKED
+                            new_entry[target]["criteria_version_snapshot"] = new_ver
+                    
+                    # 複製 Meta
+                    if "__meta__" in old_entry:
+                        new_entry["__meta__"] = old_entry["__meta__"].copy()
+                        
+                    new_tests_data[uid] = new_entry
 
         self.project_data["standard_name"] = new_config.get("standard_name")
         self.project_data["standard_version"] = new_config.get("standard_version")
@@ -1018,8 +1029,8 @@ class ProjectManager(QObject):
                             if target in old_entry:
                                 new_entry[target] = {}
                                 # 保留照片路徑
-                                if "report_path" in old_entry[target]:
-                                    new_entry[target]["report_path"] = old_entry[target]["report_path"]
+                                if "attachments" in old_entry[target]:
+                                    new_entry[target]["attachments"] = old_entry[target].get("attachments", [])
                                 # 重置結果
                                 new_entry[target]["result"] = STATUS_UNCHECKED
                                 # 更新快照版本
@@ -1418,6 +1429,170 @@ class MigrationReportDialog(QDialog):
         btns.rejected.connect(self.reject)
         layout.addWidget(btns)
 
+class AspectLabel(QLabel):
+    """
+    自動根據當前高度縮放圖片，保持比例
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setScaledContents(False)
+        self._pixmap = None
+        # 設定 Policy 為 Ignored，表示"我願意被縮小到比我原本內容更小"
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored)
+
+    def setPixmap(self, pixmap):
+        self._pixmap = pixmap
+        self.update_image()
+
+    def resizeEvent(self, event):
+        self.update_image()
+        super().resizeEvent(event)
+
+    def update_image(self):
+        if self._pixmap and not self._pixmap.isNull():
+            # 取得當前元件的實際高度 (由 Layout 決定)
+            h = self.height()
+            if h > 0:
+                scaled = self._pixmap.scaledToHeight(
+                    h, 
+                    Qt.SmoothTransformation
+                )
+                super().setPixmap(scaled)
+
+
+class AttachmentItemWidget(QWidget):
+    on_delete = Signal(QWidget) 
+
+    def __init__(self, file_path, title="", file_type="image", row_height=100):
+        super().__init__()
+        self.file_path = file_path
+        self.file_type = file_type
+        self.row_height = row_height # 儲存高度設定
+        
+        # [關鍵 1] 強制設定整列的高度 (包含 padding)
+        self.setFixedHeight(self.row_height)
+        
+        self._init_ui(title)
+
+    def _init_ui(self, title):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5) # 邊距縮小一點以容納更多內容
+        layout.setSpacing(10)
+
+        # --- 1. 拖曳手柄 ---
+        lbl_handle = QLabel("☰") 
+        lbl_handle.setStyleSheet("color: #aaa; font-size: 16pt;") 
+        lbl_handle.setCursor(Qt.SizeAllCursor)
+        lbl_handle.setFixedWidth(25)
+        lbl_handle.setAlignment(Qt.AlignCenter)
+        layout.addWidget(lbl_handle)
+
+        # --- 2. 圖片 (AspectLabel) ---
+        self.lbl_icon = AspectLabel()
+        self.lbl_icon.setFixedWidth(int(self.row_height * 1.3)) # 寬度隨高度連動，保持約 4:3 比例的佔位
+        self.lbl_icon.setAlignment(Qt.AlignCenter)
+        self.lbl_icon.setStyleSheet("border: 1px solid #eee; background-color: #f9f9f9; border-radius: 4px;")
+        
+        if self.file_type == "image" and os.path.exists(self.file_path):
+            pix = QPixmap(self.file_path)
+            if not pix.isNull():
+                self.lbl_icon.setPixmap(pix)
+            else:
+                self.lbl_icon.setText("Error")
+        else:
+            self.lbl_icon.setText("FILE")
+            
+        layout.addWidget(self.lbl_icon)
+
+        # --- 3. 資訊區 ---
+        v_info = QVBoxLayout()
+        v_info.setSpacing(2)
+        v_info.setContentsMargins(0, 5, 0, 5) # 上下留點空間
+        
+        # 標題
+        self.edit_title = QLineEdit(title)
+        self.edit_title.setPlaceholderText("請輸入說明...")
+        self.edit_title.setStyleSheet("border: 1px solid #ccc; border-radius: 3px; padding: 2px;")
+        
+        # 檔名顯示 (自動換行 + 高度限制)
+        filename = os.path.basename(self.file_path)
+        self.lbl_filename = QLabel(filename)
+        self.lbl_filename.setStyleSheet("color: #555; font-size: 9pt;")
+        self.lbl_filename.setWordWrap(True) 
+        self.lbl_filename.setAlignment(Qt.AlignTop | Qt.AlignLeft) # 文字靠上對齊
+        
+        # [關鍵 2] 設定 Vertical Policy 為 Ignored
+        # 這告訴 Layout：如果空間不夠顯示全部文字，就顯示多少算多少，不要撐大 Widget
+        self.lbl_filename.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+
+        v_info.addWidget(self.edit_title)
+        v_info.addWidget(self.lbl_filename, 1) # Stretch=1，讓文字區佔用剩餘垂直空間
+        
+        layout.addLayout(v_info, 1)
+
+        # --- 4. 刪除按鈕 ---
+        btn_del = QPushButton("✕")
+        btn_del.setFixedSize(30, 30)
+        btn_del.setCursor(Qt.PointingHandCursor)
+        btn_del.setStyleSheet("color: #d9534f; border: none; font-weight: bold;")
+        btn_del.clicked.connect(lambda: self.on_delete.emit(self))
+        layout.addWidget(btn_del)
+
+    def get_data(self):
+        return {
+            "type": self.file_type,
+            "path": self.file_path,
+            "title": self.edit_title.text()
+        }
+    
+    
+class AttachmentListWidget(QListWidget):
+    """
+    支援拖曳排序且高度自適應的列表元件
+    """
+    def __init__(self):
+        super().__init__()
+        self.setDragDropMode(QListWidget.InternalMove)
+        self.setSelectionMode(QListWidget.SingleSelection)
+        self.setSpacing(2)
+        self.setResizeMode(QListWidget.Adjust) # 讓內容隨寬度調整
+        self.setStyleSheet("""
+            QListWidget { border: 1px solid #ddd; background-color: #fff; } 
+            QListWidget::item { border-bottom: 1px solid #eee; }
+        """)
+        
+        # [設定] 您想要的一列高度 (包含圖片和多行文字的最大高度)
+        self.row_height = 60
+
+    def add_attachment(self, file_path, title="", file_type="image"):
+        item = QListWidgetItem(self)
+        
+        # 建立 Widget，傳入高度限制
+        widget = AttachmentItemWidget(file_path, title, file_type, row_height=self.row_height)
+        
+        self.setItemWidget(item, widget)
+        
+        # [關鍵 3] 設定 Item 的 SizeHint 與 Widget 高度一致
+        # 這樣 QListWidget 才知道要為這一列保留多少空間
+        item.setSizeHint(QSize(widget.sizeHint().width(), self.row_height))
+        
+        widget.on_delete.connect(self.remove_attachment_row)
+
+    def remove_attachment_row(self, widget):
+        for i in range(self.count()):
+            item = self.item(i)
+            if self.itemWidget(item) == widget:
+                self.takeItem(i)
+                break
+
+    def get_all_attachments(self) -> list:
+        results = []
+        for i in range(self.count()):
+            item = self.item(i)
+            widget = self.itemWidget(item)
+            if widget:
+                results.append(widget.get_data())
+        return results
 
 class SingleTargetTestWidget(QWidget):
     def __init__(self, target, config, pm, save_cb=None):
@@ -1425,116 +1600,159 @@ class SingleTargetTestWidget(QWidget):
         self.target = target
         self.config = config
         self.pm = pm
-        self.item_uid = config.get("uid", config.get("id"))
+        self.item_uid = config.get('uid', config.get('id'))
         self.save_cb = save_cb
         self.logic = config.get("logic", "AND").upper()
-
+        
         handler_cfg = config.get("handler", {})
         class_name = handler_cfg.get("class_name", "BaseTestTool")
-
+        
+        # Read project data
         item_data = self.pm.project_data.get("tests", {}).get(self.item_uid, {})
         target_key = self.target
         if self.target == "Shared":
             target_key = self.config.get("targets", [TARGET_GCS])[0]
         self.saved_data = item_data.get(target_key, {})
-
+        
         self.tool = ToolFactory.create_tool(class_name, config, self.saved_data, target)
-
+        
+        # Initialize UI with Scroll Area
         self._init_ui()
+        
+        # Load saved attachments
+        self._load_attachments()
 
         self.tool.status_changed.connect(self.update_combo_from_tool)
         self.pm.photo_received.connect(self.on_photo_received)
 
     def update_combo_from_tool(self, new_status):
-        """[New] 當工具判定狀態改變時，自動更新下拉選單"""
         self.combo.setCurrentText(new_status)
-        # update_color 會因為 CurrentTextChanged 而自動被觸發，所以這裡不用手動呼叫
 
     def _init_ui(self):
-        l = QVBoxLayout(self)
+        # 1. Main layout for the widget (will contain only the scroll area)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 2. Create Scroll Area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame) # Optional: remove border
+        
+        # 3. Create a widget to hold the actual content
+        content_widget = QWidget()
+        l = QVBoxLayout(content_widget) # Layout for the content
+        l.setContentsMargins(10, 10, 10, 10) # Add some padding
+        
+        # --- Build Content inside 'l' ---
+        
+        # Header
         h = QHBoxLayout()
         h.addWidget(QLabel(f"<h3>對象: {self.target}</h3>"))
         h.addWidget(QLabel(f"({self.logic})"))
         h.addStretch()
         l.addLayout(h)
+        
+        # Tool Widget (Checkboxes, etc.)
         l.addWidget(self.tool.get_widget())
-
-        g_file = QGroupBox("附加報告/檔案/照片")
-        h_file = QHBoxLayout()
-        self.lbl_file = QLabel("未選擇檔案")
-        btn_pc = QPushButton("📂 本機檔案")
+        
+        # Attachments Group
+        g_file = QGroupBox("佐證資料 (圖片/檔案)")
+        v_file = QVBoxLayout()
+        
+        # Buttons
+        h_btn = QHBoxLayout()
+        btn_pc = QPushButton("📂 加入檔案 (多選)")
         btn_pc.clicked.connect(self.upload_report_pc)
-        btn_mobile = QPushButton("📱 手機拍照")
+        btn_mobile = QPushButton("📱 手機拍照上傳")
         btn_mobile.clicked.connect(self.upload_report_mobile)
-        h_file.addWidget(self.lbl_file)
-        h_file.addWidget(btn_pc)
-        h_file.addWidget(btn_mobile)
-        g_file.setLayout(h_file)
+        h_btn.addWidget(btn_pc)
+        h_btn.addWidget(btn_mobile)
+        h_btn.addStretch()
+        v_file.addLayout(h_btn)
+        
+        # List Widget
+        self.attachment_list = AttachmentListWidget()
+        # Ensure the list has a minimum height so it's usable even if empty
+        self.attachment_list.setMinimumHeight(200) 
+        v_file.addWidget(self.attachment_list)
+        
+        g_file.setLayout(v_file)
         l.addWidget(g_file)
-
-        self.current_report_path = self.saved_data.get("report_path")
-        if self.current_report_path:
-            self.lbl_file.setText(os.path.basename(self.current_report_path))
-
+        
+        # Result Group
         g3 = QGroupBox("最終判定")
         h3 = QHBoxLayout()
         h3.addWidget(QLabel("結果:"))
         self.combo = QComboBox()
         self.combo.addItems([STATUS_UNCHECKED, STATUS_PASS, STATUS_FAIL, STATUS_NA])
         self.combo.currentTextChanged.connect(self.update_color)
+        
         saved_res = self.saved_data.get("result", STATUS_UNCHECKED)
         idx = self.combo.findText(saved_res)
-        if idx >= 0:
-            self.combo.setCurrentIndex(idx)
+        if idx >= 0: self.combo.setCurrentIndex(idx)
         self.update_color(saved_res)
+        
         h3.addWidget(self.combo)
         g3.setLayout(h3)
         l.addWidget(g3)
-        l.addStretch()
+        
+        l.addStretch() # Push everything up
+        
+        # Save Button (Bottom)
         btn = QPushButton(f"儲存 ({self.target})")
-        btn.setStyleSheet(
-            "background-color: #4CAF50; color: white; font-weight: bold; padding: 10px;"
-        )
+        btn.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 10px;")
         btn.clicked.connect(self.on_save)
         l.addWidget(btn)
 
+        # --- End Content Building ---
+
+        # 4. Set content widget to scroll area
+        scroll.setWidget(content_widget)
+        
+        # 5. Add scroll area to main layout
+        main_layout.addWidget(scroll)
+
+    def _load_attachments(self):
+        """Load attachments from saved data into the list widget."""
+        attachments = self.saved_data.get("attachments", [])
+        
+        for item in attachments:
+            rel_path = item["path"]
+            full_path = rel_path
+            
+            if not os.path.isabs(rel_path) and self.pm.current_project_path:
+                full_path = os.path.join(self.pm.current_project_path, rel_path)
+            
+            self.attachment_list.add_attachment(full_path, item.get("title", ""), item.get("type", "image"))
+
     def upload_report_pc(self):
-        if not self.pm.current_project_path:
-            return
-        f, _ = QFileDialog.getOpenFileName(
-            self, "選擇檔案", "", "Files (*.pdf *.html *.txt *.jpg *.png)"
-        )
-        if f:
-            rel = self.pm.import_file(f, DIR_REPORTS)
-            if rel:
-                self.current_report_path = rel
-                self.lbl_file.setText(os.path.basename(rel))
+        if not self.pm.current_project_path: return
+        
+        files, _ = QFileDialog.getOpenFileNames(self, "選擇檔案", "", "Images (*.jpg *.png *.jpeg);;Files (*.pdf *.txt)")
+        
+        if files:
+            for f_path in files:
+                rel_path = self.pm.import_file(f_path, DIR_REPORTS)
+                if rel_path:
+                    ext = os.path.splitext(f_path)[1].lower()
+                    ftype = "image" if ext in ['.jpg', '.jpeg', '.png', '.bmp'] else "file"
+                    full_display_path = os.path.join(self.pm.current_project_path, rel_path)
+                    self.attachment_list.add_attachment(full_display_path, "", ftype)
 
     def upload_report_mobile(self):
-        if not self.pm.current_project_path:
-            return
+        if not self.pm.current_project_path: return
         title = f"{self.item_uid} 佐證 ({self.target})"
         url = self.pm.generate_mobile_link(self.item_uid, title, is_report=False)
-        if url:
-            QRCodeDialog(self, self.pm, url, title).exec()
+        if url: QRCodeDialog(self, self.pm, url, title).exec()
 
     @Slot(str, str, str)
     def on_photo_received(self, target_id, category, path):
         if target_id == self.item_uid:
-            self.current_report_path = path
-            self.lbl_file.setText(f"收到: {os.path.basename(path)}")
-            QMessageBox.information(
-                self,
-                "收到佐證",
-                f"已收到手機上傳的佐證照片：\n{os.path.basename(path)}",
-            )
+            self.attachment_list.add_attachment(path, category, "image")
+            # QMessageBox.information(self, "收到佐證", f"已新增照片：\n{os.path.basename(path)}")
 
     def update_color(self, t):
-        """
-        根據下拉選單的文字改變顏色，並自動更新備註欄引導文字。
-        """
         s = ""
-        # [Fix] 使用 get_user_note() 確保讀到正確的欄位
         current_note = self.tool.get_user_note()
 
         if STATUS_PASS in t:
@@ -1555,23 +1773,29 @@ class SingleTargetTestWidget(QWidget):
                 
         self.combo.setStyleSheet(s)
 
-    # 在 SingleTargetTestWidget class 內
     def on_save(self):
         if not self.pm.current_project_path: return
         
-        # 1. 取得 Tool 內部的資料
         tool_data = self.tool.get_result()
-        
-        # 2. 組合資料 (下拉選單已經即時連動，直接讀取即可)
         final_data = tool_data.copy()
         
-        # 移除暫存欄位
         if "auto_suggest_result" in final_data:
             del final_data["auto_suggest_result"]
+            
+        # 1. 收集目前的附件列表
+        attachments = self.attachment_list.get_all_attachments()
+        
+        # 2. 路徑正規化
+        for att in attachments:
+            full_path = att["path"]
+            if os.path.isabs(full_path) and full_path.startswith(self.pm.current_project_path):
+                 rel = os.path.relpath(full_path, self.pm.current_project_path)
+                 att["path"] = rel.replace("\\", "/") 
 
+        # 3. 寫入資料 (僅使用 attachments)
         final_data.update({
-            "result": self.combo.currentText(), # 這裡會是使用者看到的最新狀態
-            "report_path": self.current_report_path,
+            "result": self.combo.currentText(),
+            "attachments": attachments, 
             "criteria_version_snapshot": self.config.get("criteria_version")
         })
         
@@ -1581,12 +1805,18 @@ class SingleTargetTestWidget(QWidget):
             self.pm.update_test_result(self.item_uid, self.target, final_data)
             QMessageBox.information(self, "成功", "已儲存")
 
+
 class UniversalTestPage(QWidget):
+    """
+    角色：這是「一個測項（例如 6.2.1）」的完整頁面。
+    職責：因為一個測項可能同時要測 UAV 和 GCS，這個頁面負責管理 Tab 分頁（或分割畫面）。
+    內容：它裡面包含了 1 個或多個 SingleTargetTestWidget。
+    """
     def __init__(self, config, pm):
         super().__init__()
         self.config = config
         self.pm = pm
-        self.targets = config.get("targets", [TARGET_GCS])
+        self.targets = config.get("targets", [TARGET_UAV])
         self.allow_share = config.get("allow_share", False)
         self._init_ui()
         self._load_state()
@@ -1594,8 +1824,8 @@ class UniversalTestPage(QWidget):
     def _init_ui(self):
         l = QVBoxLayout(self)
         h = QHBoxLayout()
-        # h.addWidget(QLabel(f"<h2>{self.config['name']}</h2>"))
-        # l.addLayout(h)
+        h.addWidget(QLabel(f"<h2>{self.config['name']}</h2>"))
+        l.addLayout(h)
         self.chk = None
         if len(self.targets) > 1:
             self.chk = QCheckBox("共用結果")
@@ -2078,11 +2308,11 @@ class OverviewPage(QWidget):
     def on_photo_received(self, target_id, category, path):
         if target_id in TARGETS:
             self.refresh_data()
-            QMessageBox.information(
-                self,
-                "收到照片",
-                f"已收到:\n{target_id.upper()} - {category}\n{os.path.basename(path)}",
-            )
+            # QMessageBox.information(
+            #     self,
+            #     "收到照片",
+            #     f"已收到:\n{target_id.upper()} - {category}\n{os.path.basename(path)}",
+            # )
 
 
 
@@ -2097,6 +2327,8 @@ class MainApp(QMainWindow):
         self.pm = ProjectManager()
         self.test_ui_elements = {}
         self.current_font_size = 10
+
+        self.pm.photo_received.connect(self.on_photo_received)
         
         # 1. 嘗試載入最新規範作為預設 UI 框架 (若無則為 None)
         # 注意: ConfigManager 需要有 get_latest_config() 方法，若沒有請補上，或用 list_available_configs()[0]
@@ -2106,6 +2338,9 @@ class MainApp(QMainWindow):
         self.cw = QWidget()
         self.setCentralWidget(self.cw)
         self.main_l = QVBoxLayout(self.cw)
+
+        self.setStatusBar(QStatusBar(self))
+        self.statusBar().showMessage("就緒") # 初始訊息
         
         self._init_menu() # 建立選單
         
@@ -2587,6 +2822,20 @@ class MainApp(QMainWindow):
         l = QVBoxLayout(self.win)
         l.addWidget(UniversalTestPage(item, self.pm))
         self.win.show()
+
+    @Slot(str, str, str)
+    def on_photo_received(self, target_id, category, path):
+        # 這裡原本有 QMessageBox，請刪除或註解掉
+        
+        # [修改 2] 改用 StatusBar 顯示訊息，並設定 5000 毫秒 (5秒) 後自動消失
+        filename = os.path.basename(path)
+        msg = f"✅ 已收到照片：[{target_id} - {category}] {filename}"
+        self.statusBar().showMessage(msg, 5000) 
+        
+        # 這裡可以保留 refresh_ui，確保介面有更新
+        if target_id in TARGETS:
+            self.refresh_ui()
+            # 如果 OverviewPage 也有綁定這個訊號，refresh_ui 裡的 self.overview.refresh_data() 會處理
 
 
 if __name__ == "__main__":
