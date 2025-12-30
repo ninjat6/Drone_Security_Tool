@@ -1,6 +1,6 @@
 {
     "standard_name": "遙控無人機資安檢測規範_v1.0",
-    "version": "MODA_1.0",
+    "standard_version": "MODA_1.0",
     "project_meta_schema": [
         {
             "key": "project_name",

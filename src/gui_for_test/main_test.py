@@ -597,8 +597,8 @@ class ConfigManager:
                         data = json.load(f)
                         if "standard_name" in data:
                             display_name = data["standard_name"]
-                        elif "version" in data:
-                            display_name = f"規範版本 {data['version']} ({filename})"
+                        elif "standard_version" in data:
+                            display_name = f"規範版本 {data['standard_version']} ({filename})"
                 except Exception as e:
                     display_name = f"{filename} (讀取錯誤)"
                 configs.append({"name": display_name, "path": full_path})
@@ -789,7 +789,7 @@ class ProjectManager(QObject):
                 new_tests_data[uid] = new_entry
 
         self.project_data["standard_name"] = new_config.get("standard_name")
-        self.project_data["version"] = new_config.get("version")
+        self.project_data["standard_version"] = new_config.get("standard_version")
         self.project_data["tests"] = new_tests_data
         self.set_standard_config(new_config)
         self.save_all()
@@ -884,9 +884,9 @@ class ProjectManager(QObject):
         form_data["project_name"] = os.path.basename(final_path)
         form_data["project_type"] = PROJECT_TYPE_FULL
         current_std_name = self.std_config.get("standard_name", "Unknown")
-        current_std_version = self.std_config.get("version", "Unknown")
+        current_std_version = self.std_config.get("standard_version", "Unknown")
         self.project_data = {
-            "version": current_std_version,
+            "standard_version": current_std_version,
             "standard_name": current_std_name,
             "info": form_data,
             "tests": {},
@@ -927,9 +927,9 @@ class ProjectManager(QObject):
         info_data["project_type"] = PROJECT_TYPE_ADHOC
         info_data["target_items"] = selected_items
         current_std_name = self.std_config.get("standard_name", "Unknown")
-        current_std_version = self.std_config.get("version", "Unknown")
+        current_std_version = self.std_config.get("standard_version", "Unknown")
         self.project_data = {
-            "version": current_std_version,
+            "standard_version": current_std_version,
             "standard_name": current_std_name,
             "info": info_data,
             "tests": {},
@@ -970,7 +970,7 @@ class ProjectManager(QObject):
             # 3. 準備新的專案資料 (基於 migration_report)
             old_data = self.project_data
             new_data = {
-                "version": "2.0",
+                "standard_version": new_config.get("standard_version"),
                 "standard_name": new_config.get("standard_name"),
                 "info": old_data.get("info", {}).copy(),
                 "tests": {}
@@ -1222,11 +1222,23 @@ class ProjectManager(QObject):
         if not self.current_project_path:
             return False, "No Path"
         path = os.path.join(self.current_project_path, self.settings_filename)
+        temp_path = path + ".tmp"
         try:
-            with open(path, "w", encoding="utf-8") as f:
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(self.project_data, f, ensure_ascii=False, indent=4)
+                f.flush()
+                os.fsync(f.fileno()) # 強制寫入磁碟
+            
+            # 2. 原子寫入
+            if os.path.exists(path):
+                os.replace(temp_path, path)
+            else:
+                os.rename(temp_path, path)
+                
             return True, "Saved"
         except Exception as e:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
             return False, str(e)
 
     def get_test_status_detail(self, item_config) -> Dict[str, str]:
@@ -2143,7 +2155,7 @@ class MainApp(QMainWindow):
         if not self.config: return
 
         # 設定視窗標題
-        std_name = self.config.get("standard_name", self.config.get("version", "Unknown"))
+        std_name = self.config.get("standard_name", self.config.get("standard_version", "Unknown"))
         if self.pm.current_project_path:
              proj_name = self.pm.project_data.get("info", {}).get("project_name", "未命名")
              self.setWindowTitle(f"無人機資安檢測工具 - {proj_name} [{std_name}]")
