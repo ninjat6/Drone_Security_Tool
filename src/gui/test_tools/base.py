@@ -107,19 +107,21 @@ class BaseTestToolView(QWidget):
         """建立佐證資料區"""
         g_file = QGroupBox("佐證資料 (圖片/檔案)")
         v_file = QVBoxLayout()
+        v_file.setContentsMargins(1, 1, 1, 1)
 
         h_btn = QHBoxLayout()
         btn_pc = QPushButton("📂 加入檔案 (多選)")
         btn_pc.clicked.connect(self.upload_pc_clicked)
         btn_mobile = QPushButton("📱 手機拍照上傳")
         btn_mobile.clicked.connect(self.upload_mobile_clicked)
-        h_btn.addWidget(btn_pc)
-        h_btn.addWidget(btn_mobile)
-        h_btn.addStretch()
+        h_btn.addWidget(btn_pc, 1)
+        h_btn.addWidget(btn_mobile, 1)
+        # h_btn.addStretch()
         v_file.addLayout(h_btn)
 
         self.attachment_list = AttachmentListWidget()
-        self.attachment_list.setMinimumHeight(150)
+        # self.attachment_list.setMinimumHeight(150)
+        self.attachment_list.setMaximumHeight(150)
         v_file.addWidget(self.attachment_list)
 
         g_file.setLayout(v_file)
@@ -130,7 +132,8 @@ class BaseTestToolView(QWidget):
         # Result Group
         g3 = QGroupBox("最終判定")
         h3 = QHBoxLayout()
-        h3.addWidget(QLabel("結果:"))
+        # h3.setContentsMargins(1, 1, 1, 1)
+        # h3.addWidget(QLabel("結果:"))
 
         self.result_combo = QComboBox()
         self.result_combo.addItems(
@@ -142,14 +145,7 @@ class BaseTestToolView(QWidget):
         g3.setLayout(h3)
         layout.addWidget(g3)
 
-        # Save Button
-        target_name = self.config.get("target_display", "Target")
-        self.btn_save = QPushButton(f"儲存 ({target_name})")
-        self.btn_save.setStyleSheet(
-            "background-color: #4CAF50; color: white; font-weight: bold; padding: 10px;"
-        )
-        self.btn_save.clicked.connect(self.save_clicked)
-        layout.addWidget(self.btn_save)
+        # Save Button 會在 _init_ui 中另外處理，固定在底部
 
     def _init_ui(self):
         """建構 UI - 使用 Template Method Pattern"""
@@ -158,11 +154,9 @@ class BaseTestToolView(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
 
         # 1. 標題區 (Header)
-        target_name = self.config.get("target_display", "Target")
-        h_header = QHBoxLayout()
-        h_header.addWidget(QLabel(f"<h3>對象: {target_name}</h3>"))
-        h_header.addStretch()
-        main_layout.addLayout(h_header)
+        # h_header = QHBoxLayout()
+        # h_header.addStretch()
+        # main_layout.addLayout(h_header)
 
         # 內容容器 (包含 Tool UI + 佐證 + 結果)
         content_widget = QWidget()
@@ -191,8 +185,7 @@ class BaseTestToolView(QWidget):
         # 1.5 佐證資料區 (新增)
         self._build_attachment_section(left_layout)
 
-        # 1.6 最終判定與儲存區 (新增)
-        self._build_result_section(left_layout)
+        # 最終判定與儲存會在底部固定區域處理
 
         left_layout.addStretch()
         content_layout.addWidget(left_widget, stretch=1)
@@ -208,7 +201,31 @@ class BaseTestToolView(QWidget):
         scroll.setWidget(content_widget)
         scroll.setFrameShape(QFrame.NoFrame)  # 移除邊框讓外觀更乾淨
 
-        main_layout.addWidget(scroll)
+        main_layout.addWidget(scroll, stretch=1)
+
+        # 底部固定區：最終判定 + 儲存按鈕
+        bottom_bar = QHBoxLayout()
+        bottom_bar.setContentsMargins(5, 5, 5, 5)
+        bottom_bar.setSpacing(10)
+
+        # 最終判定
+        bottom_bar.addWidget(QLabel("最終判定:"))  # 不 stretch，只佔文字寬度
+        self.result_combo = QComboBox()
+        self.result_combo.addItems(
+            [STATUS_UNCHECKED, STATUS_PASS, STATUS_FAIL, STATUS_NA]
+        )
+        self.result_combo.currentTextChanged.connect(self.result_changed)
+        bottom_bar.addWidget(self.result_combo, stretch=1)
+
+        # 儲存按鈕
+        self.btn_save = QPushButton("儲存")
+        self.btn_save.setStyleSheet(
+            "background-color: #4CAF50; color: white; font-weight: bold; padding: 10px 30px;"
+        )
+        self.btn_save.clicked.connect(self.save_clicked)
+        bottom_bar.addWidget(self.btn_save, stretch=2)
+
+        main_layout.addLayout(bottom_bar)
 
     def _build_logic_hint(self, layout: QVBoxLayout):
         """建立判定邏輯提示"""
@@ -250,12 +267,14 @@ class BaseTestToolView(QWidget):
         self.desc_edit.setHtml(display_html)
         self.desc_edit.setReadOnly(True)
         self.desc_edit.setStyleSheet(Styles.DESC_BOX)
-        self.desc_edit.setMinimumHeight(150)
+        # self.desc_edit.setMinimumHeight(150)
+        self.desc_edit.setMaximumHeight(250)
         self.desc_edit.setLineWrapMode(QTextEdit.WidgetWidth)
         self.desc_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         g1 = QGroupBox(S.GB_NARRATIVE)
         v1 = QVBoxLayout()
+        v1.setContentsMargins(1, 1, 1, 1)
         v1.addWidget(self.desc_edit)
         g1.setLayout(v1)
         layout.addWidget(g1)
@@ -269,6 +288,7 @@ class BaseTestToolView(QWidget):
 
         gb = QGroupBox(S.GB_CHECKLIST)
         gb_layout = QVBoxLayout()
+        gb_layout.setContentsMargins(1, 1, 1, 1)
         gb_layout.setSpacing(8)
 
         for item in checklist_data:

@@ -26,11 +26,14 @@ class AttachmentItemWidget(QWidget):
 
     on_delete = Signal(QWidget)
 
-    def __init__(self, file_path, title="", file_type="image", row_height=100):
+    def __init__(
+        self, file_path, title="", file_type="image", row_height=90, extra_data=None
+    ):
         super().__init__()
         self.file_path = file_path
         self.file_type = file_type
         self.row_height = row_height
+        self.extra_data = extra_data or {}  # 額外欄位 (e.g. command)
 
         # 強制設定整列的高度 (包含 padding)
         self.setFixedHeight(self.row_height)
@@ -46,7 +49,7 @@ class AttachmentItemWidget(QWidget):
         lbl_handle = QLabel("☰")
         lbl_handle.setStyleSheet("color: #aaa; font-size: 16pt;")
         lbl_handle.setCursor(Qt.SizeAllCursor)
-        lbl_handle.setFixedWidth(25)
+        # lbl_handle.setFixedWidth(25)
         lbl_handle.setAlignment(Qt.AlignCenter)
         layout.addWidget(lbl_handle)
 
@@ -63,32 +66,24 @@ class AttachmentItemWidget(QWidget):
             else:
                 self.lbl_icon.setText("Error")
         else:
-            self.lbl_icon.setText("FILE")
+            self.lbl_icon.setText(self.file_type)
+        # if self.file_type == "file" and os.path.exists(self.file_path):
+        #     self.lbl_icon.setText("file")
+        # if self.file_type == "log" and not os.path.exists(self.file_path):
+        #     self.lbl_icon.setText("file")
 
         layout.addWidget(self.lbl_icon)
 
-        # --- 3. 資訊區 ---
-        v_info = QVBoxLayout()
-        v_info.setSpacing(2)
-        v_info.setContentsMargins(0, 5, 0, 5)
-
-        # 標題
-        self.edit_title = QLineEdit(title)
-        self.edit_title.setPlaceholderText("請輸入說明...")
-        self.edit_title.setStyleSheet(Styles.ATTACHMENT_TITLE)
-
-        # 檔名顯示
+        # --- 3. 資訊區 (單行佈局) ---
         filename = os.path.basename(self.file_path)
-        self.lbl_filename = QLabel(filename)
-        self.lbl_filename.setStyleSheet("color: #555; font-size: 9pt;")
-        self.lbl_filename.setWordWrap(True)
-        self.lbl_filename.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.lbl_filename.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
 
-        v_info.addWidget(self.edit_title)
-        v_info.addWidget(self.lbl_filename, 1)
+        # 標題輸入框
+        self.edit_title = QLineEdit(title if title else filename)
+        self.edit_title.setPlaceholderText("請輸入說明...")
+        self.edit_title.setStyleSheet(Styles.ATTACHMENT_TITLE + " font-size: 9pt;")
+        self.edit_title.setToolTip(f"檔案: {filename}")  # Hover 顯示完整檔名
 
-        layout.addLayout(v_info, 1)
+        layout.addWidget(self.edit_title, 1)
 
         # --- 4. 刪除按鈕 ---
         btn_del = QPushButton("✕")
@@ -99,11 +94,14 @@ class AttachmentItemWidget(QWidget):
         layout.addWidget(btn_del)
 
     def get_data(self):
-        return {
+        data = {
             "type": self.file_type,
             "path": self.file_path,
             "title": self.edit_title.text(),
         }
+        # 合併額外欄位
+        data.update(self.extra_data)
+        return data
 
 
 class AttachmentListWidget(QListWidget):
@@ -118,7 +116,7 @@ class AttachmentListWidget(QListWidget):
         self.setStyleSheet(Styles.ATTACHMENT_LIST)
 
         # 一列高度 (包含圖片和多行文字的最大高度)
-        self.row_height = 60
+        self.row_height = 40
 
     def add_attachment(self, file_path, title="", file_type="image"):
         item = QListWidgetItem(self)
@@ -133,6 +131,24 @@ class AttachmentListWidget(QListWidget):
         # 設定 Item 的 SizeHint 與 Widget 高度一致
         item.setSizeHint(QSize(widget.sizeHint().width(), self.row_height))
 
+        widget.on_delete.connect(self.remove_attachment_row)
+
+    def add_attachment_with_extra(
+        self, file_path, title="", file_type="image", extra_data=None
+    ):
+        """加入附件並附帶額外欄位 (e.g. command)"""
+        item = QListWidgetItem(self)
+
+        widget = AttachmentItemWidget(
+            file_path,
+            title,
+            file_type,
+            row_height=self.row_height,
+            extra_data=extra_data,
+        )
+
+        self.setItemWidget(item, widget)
+        item.setSizeHint(QSize(widget.sizeHint().width(), self.row_height))
         widget.on_delete.connect(self.remove_attachment_row)
 
     def remove_attachment_row(self, widget):

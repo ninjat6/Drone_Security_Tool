@@ -28,7 +28,7 @@ class UniversalTestPage(QWidget):
         super().__init__()
         self.config = config
         self.pm = pm
-        self.targets = config.get("targets", [TARGET_UAV])
+        self.targets = config.get("targets", "ERROR")
         self.allow_share = config.get("allow_share", False)
         self.tools = []  # 防止 Tool 被 Garbage Collection 回收
         self._init_ui()
@@ -38,7 +38,11 @@ class UniversalTestPage(QWidget):
         # self.resize(1200, 1200)
         layout = QVBoxLayout(self)
         h = QHBoxLayout()
-        h.addWidget(QLabel(f"<h2>{self.config['name']}</h2>"))
+        h.addWidget(
+            QLabel(
+                f"<h3>{self.config['name']}: {str(self.targets[0]) if len(self.targets) == 1 else ''}</h3>"
+            )
+        )
         layout.addLayout(h)
 
         self.chk = None

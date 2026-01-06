@@ -65,6 +65,9 @@ class MainApp(BorderedMainWindow):
 
         self.config = self._get_initial_config()
 
+        # 設定主視窗大小
+        self.resize(1400, 900)
+
         # UI 初始化
         self.cw = QWidget()
         self.setCentralWidget(self.cw)
@@ -552,7 +555,7 @@ class MainApp(BorderedMainWindow):
             is_visible = self.pm.is_section_visible(sec_id)
             self.tabs.setTabEnabled(t_idx, is_visible)
             self.tabs.setTabText(
-                t_idx, sec["section_name"] + (" (N/A)" if not is_visible else "")
+                t_idx, sec["section_name"] + (" (未啟用)" if not is_visible else "")
             )
 
     def open_test(self, item):

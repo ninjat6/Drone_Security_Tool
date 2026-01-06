@@ -144,14 +144,14 @@ class CommandTestToolView(BaseTestToolView):
         self.btn_screenshot = QPushButton(S.BTN_SCREENSHOT)
         self.btn_screenshot.setStyleSheet(Styles.BTN_PADDING)
         self.btn_screenshot.clicked.connect(lambda: self.screenshot_requested.emit())
-        h_actions.addWidget(self.btn_screenshot)
+        h_actions.addWidget(self.btn_screenshot, 1)
 
         self.btn_save_log = QPushButton(S.BTN_SAVE_LOG)
         self.btn_save_log.setStyleSheet(Styles.BTN_PADDING)
         self.btn_save_log.clicked.connect(lambda: self.save_log_requested.emit())
-        h_actions.addWidget(self.btn_save_log)
+        h_actions.addWidget(self.btn_save_log, 1)
 
-        h_actions.addStretch()
+        # h_actions.addStretch()
         v_result.addLayout(h_actions)
 
         g_result.setLayout(v_result)
@@ -509,7 +509,7 @@ class CommandTestTool(BaseTestTool):
         )
 
     def _save_log(self):
-        """儲存 log 紀錄"""
+        """儲存 log 紀錄並加入佐證資料"""
         if not self.project_path:
             QMessageBox.warning(None, "錯誤", "專案路徑未設定，無法儲存 log")
             return
@@ -535,21 +535,22 @@ class CommandTestTool(BaseTestTool):
             f.write(f"# ===================================\n\n")
             f.write(self.last_result)
 
-        # 更新 log 路徑
-        self.log_path = os.path.relpath(filepath, self.project_path)
+        # 產生建議標題
+        suggested_title = f"指令執行紀錄 ({timestamp})"
 
-        # 發送 Signal
-        self.log_saved.emit(self.log_path)
+        # 加入到附件列表 (使用 type: "log" 和 command 欄位)
+        if self.view.attachment_list:
+            self.view.attachment_list.add_attachment_with_extra(
+                filepath, suggested_title, "log", {"command": self.last_command}
+            )
 
-        QMessageBox.information(None, "儲存成功", f"Log 已儲存：\n{filename}")
+        QMessageBox.information(
+            None, "儲存成功", f"Log 已儲存並加入佐證資料：\n{filename}"
+        )
 
     def get_result(self) -> Dict:
-        """覆寫：加入指令執行專用資料"""
-        base_result = super().get_result()
-        data_key = self._get_command_data_key()
-        base_result[f"{data_key}_command"] = self.last_command
-        base_result[f"{data_key}_result"] = self.log_path
-        return base_result
+        """覆寫：繼承基本結果"""
+        return super().get_result()
 
     # ----- 子類別可覆寫的方法 -----
 
