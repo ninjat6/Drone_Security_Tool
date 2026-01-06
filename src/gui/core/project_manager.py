@@ -574,6 +574,14 @@ class ProjectManager(QObject):
         self.save_all()
         self.data_changed.emit()
 
+    def get_test_result(self, test_uid, target, is_shared=False):
+        """取得測項結果"""
+        tests = self.project_data.get("tests", {})
+        item_data = tests.get(test_uid, {})
+        # 如果是共用模式，TestPage 傳入的 target 可能是 "Shared"
+        # 這裡直接回傳對應 target 的資料即可
+        return item_data.get(target, {})
+
     def update_adhoc_items(self, new_whitelist, removed_items):
         """更新 Ad-Hoc 白名單，並刪除被移除項目的資料"""
         if not self.current_project_path:

@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 from constants import TARGET_UAV
 
-from .single_target import SingleTargetTestWidget
+from test_tools.factory import ToolFactory
 
 
 class UniversalTestPage(QWidget):
@@ -30,10 +30,12 @@ class UniversalTestPage(QWidget):
         self.pm = pm
         self.targets = config.get("targets", [TARGET_UAV])
         self.allow_share = config.get("allow_share", False)
+        self.tools = []  # 防止 Tool 被 Garbage Collection 回收
         self._init_ui()
         self._load_state()
 
     def _init_ui(self):
+        # self.resize(1200, 1200)
         layout = QVBoxLayout(self)
         h = QHBoxLayout()
         h.addWidget(QLabel(f"<h2>{self.config['name']}</h2>"))
@@ -57,18 +59,47 @@ class UniversalTestPage(QWidget):
         if len(self.targets) > 1:
             tabs = QTabWidget()
             for t in self.targets:
-                tabs.addTab(SingleTargetTestWidget(t, self.config, self.pm), t)
+                tabs.addTab(self._create_tool_widget(t), t)
             v.addWidget(tabs)
         else:
-            v.addWidget(SingleTargetTestWidget(self.targets[0], self.config, self.pm))
+            v.addWidget(self._create_tool_widget(self.targets[0]))
 
         self.stack.addWidget(self.p_sep)
 
         if len(self.targets) > 1:
-            self.p_share = SingleTargetTestWidget(
-                "Shared", self.config, self.pm, save_cb=self.save_share
+            self.p_share = self._create_tool_widget(
+                "Shared", is_shared=True, save_cb=self.save_share
             )
             self.stack.addWidget(self.p_share)
+
+    def _create_tool_widget(self, target, is_shared=False, save_cb=None):
+        """建立測項 Widget"""
+        uid = self.config.get("uid", self.config.get("id"))
+
+        # 取得已存資料
+        if save_cb:  # Shared mode usually passes save_cb
+            # For shared, we might just load from one target or a specific shared record?
+            # Logic in original SingleTargetTestWidget for shared: "Shared" as target
+            data = self.pm.get_test_result(uid, target, is_shared=is_shared)
+        else:
+            data = self.pm.get_test_result(uid, target, is_shared=False)
+
+        # 優先從 handler.class_name 讀取，相容舊版 tool_class
+        handler = self.config.get("handler", {})
+        class_name = handler.get("class_name")
+        if not class_name:
+            class_name = self.config.get("tool_class", "BaseTestTool")
+
+        tool = ToolFactory.create_tool(
+            class_name,
+            self.config,
+            data,
+            target,
+            project_manager=self.pm,
+            save_callback=save_cb,
+        )
+        self.tools.append(tool)
+        return tool.get_widget()
 
     def _load_state(self):
         uid = self.config.get("uid", self.config.get("id"))

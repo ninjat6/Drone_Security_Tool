@@ -23,7 +23,14 @@ class ToolFactory:
         cls._registry[name] = tool_class
 
     @staticmethod
-    def create_tool(class_name: str, config, result_data, target) -> BaseTestTool:
+    def create_tool(
+        class_name: str,
+        config,
+        result_data,
+        target,
+        project_manager=None,
+        save_callback=None,
+    ) -> BaseTestTool:
         """建立 Tool 實例"""
         tool_class = ToolFactory._registry.get(class_name, BaseTestTool)
-        return tool_class(config, result_data, target)
+        return tool_class(config, result_data, target, project_manager, save_callback)

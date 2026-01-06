@@ -9,7 +9,7 @@ import os
 # 檔案系統設定
 # ==============================================================================
 
-CONFIG_DIR = "configs"
+CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
 PROJECT_SETTINGS_FILENAME = "project_settings.json"
 DIR_IMAGES = "images"
 DIR_REPORTS = "reports"

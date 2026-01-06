@@ -558,7 +558,7 @@ class MainApp(BorderedMainWindow):
     def open_test(self, item):
         self.win = QWidget()
         self.win.setWindowTitle(f"檢測 {item['id']} {item['name']}")
-        self.win.resize(600, 700)
+        self.win.resize(1200, 800)
         l = QVBoxLayout(self.win)
         l.addWidget(UniversalTestPage(item, self.pm))
         self.win.show()

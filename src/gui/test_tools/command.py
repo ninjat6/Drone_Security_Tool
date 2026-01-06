@@ -6,6 +6,7 @@
 from jinja2.utils import pass_eval_context
 import os
 import sys
+import signal
 from datetime import datetime
 from typing import Dict, Optional
 
@@ -268,6 +269,7 @@ class CommandWorker(QThread):
 
     def run(self):
         import subprocess
+        import select
 
         try:
             self.process = subprocess.Popen(
@@ -276,15 +278,37 @@ class CommandWorker(QThread):
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                start_new_session=True,
             )
 
-            for line in iter(self.process.stdout.readline, ""):
+            # 使用 select 進行非阻塞讀取，每 0.1 秒檢查一次取消狀態
+            while True:
                 if self._is_cancelled:
                     break
-                self.output_ready.emit(line)
+
+                # 檢查是否有資料可讀 (timeout 0.1 秒)
+                ready, _, _ = select.select([self.process.stdout], [], [], 0.1)
+
+                if ready:
+                    line = self.process.stdout.readline()
+                    if line == "":
+                        break  # EOF - 程序已結束
+                    self.output_ready.emit(line)
+
+                # 檢查程序是否已結束
+                if self.process.poll() is not None:
+                    # 讀取剩餘輸出
+                    remaining = self.process.stdout.read()
+                    if remaining:
+                        self.output_ready.emit(remaining)
+                    break
 
             self.process.stdout.close()
-            self.process.wait()
+
+            # 只有在非取消狀態下才等待程序結束
+            if not self._is_cancelled:
+                self.process.wait()
+
             self.finished_signal.emit("")
 
         except FileNotFoundError:
@@ -300,14 +324,17 @@ class CommandWorker(QThread):
     def cancel(self):
         self._is_cancelled = True
         if self.process:
+            # 殺掉整個 Process Group
             try:
-                self.process.terminate()  # 嘗試優雅停止
-                self.process.wait(timeout=1)
-            except Exception:
-                try:
-                    self.process.kill()  # 強制停止
-                except:
-                    pass
+                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            except:
+                pass
+
+            # 強制殺死 pkexec
+            try:
+                self.process.kill()
+            except:
+                pass
 
 
 # ==============================================================================
@@ -336,15 +363,18 @@ class CommandTestTool(BaseTestTool):
     screenshot_taken = Signal(str, str)  # (image_path, suggested_title)
     log_saved = Signal(str)  # log_path
 
-    def __init__(self, config, result_data, target):
-        super().__init__(config, result_data, target)
+    def __init__(
+        self, config, result_data, target, project_manager=None, save_callback=None
+    ):
+        super().__init__(config, result_data, target, project_manager, save_callback)
 
         # 指令執行狀態
         self.last_command = ""
         self.last_result = ""
         self.worker = None
         self.log_path = ""
-        self.project_path = ""
+        self.worker = None
+        self.log_path = ""
 
         # 綁定 View 事件
         self.view.run_requested.connect(self._run_command)
@@ -356,9 +386,10 @@ class CommandTestTool(BaseTestTool):
         if result_data:
             self._load_command_data(result_data)
 
-    def set_project_path(self, path: str):
-        """設定專案路徑 (由 SingleTargetTestWidget 呼叫)"""
-        self.project_path = path
+    @property
+    def project_path(self):
+        """取得專案路徑 (從 ProjectManager)"""
+        return self.pm.current_project_path if self.pm else None
 
     def _create_view(self, config) -> CommandTestToolView:
         """覆寫：回傳 CommandTestToolView"""
@@ -467,8 +498,11 @@ class CommandTestTool(BaseTestTool):
         # 產生建議標題
         suggested_title = self._get_screenshot_title(timestamp)
 
-        # 發送 Signal 通知 SingleTargetTestWidget
-        self.screenshot_taken.emit(filepath, suggested_title)
+        # 直接加入到附件列表 (不再發送 Signal)
+        if self.view.attachment_list:
+            # 轉換為相對於專案的顯示路徑
+            rel_path = os.path.relpath(filepath, self.project_path)
+            self.view.attachment_list.add_attachment(filepath, suggested_title, "image")
 
         QMessageBox.information(
             None, "截圖成功", f"完整截圖已儲存並加入佐證資料：\n{filename}"
@@ -537,7 +571,7 @@ class CommandTestTool(BaseTestTool):
 
     def _get_screenshot_width(self) -> int:
         """子類別覆寫：截圖寬度 (px)"""
-        return 800
+        return 650
 
     def _get_command_data_key(self) -> str:
         """子類別覆寫：資料儲存的 key 前綴"""
@@ -579,5 +613,6 @@ if __name__ == "__main__":
     tool = CommandTestTool(dummy_config, {}, "target_test")
     tool.set_project_path(os.path.join(os.path.expanduser("~"), "Desktop"))
 
+    tool.get_widget().resize(1200, 800)  # 調整視窗大小以便檢視
     tool.get_widget().show()
     sys.exit(app.exec())

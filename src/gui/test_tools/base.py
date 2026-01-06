@@ -4,6 +4,7 @@
 """
 
 from typing import Dict, Optional, Tuple
+import os
 
 from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtWidgets import (
@@ -14,10 +15,29 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QTextEdit,
     QGroupBox,
+    QComboBox,
+    QPushButton,
+    QFrame,
+    QFileDialog,
+    QMessageBox,
+    QScrollArea,
 )
 
 from styles import Styles
-from constants import STATUS_PASS, STATUS_FAIL
+from widgets.attachment import AttachmentListWidget
+from dialogs.qr_dialog import QRCodeDialog
+from constants import (
+    STATUS_PASS,
+    STATUS_FAIL,
+    STATUS_NA,
+    STATUS_UNCHECKED,
+    COLOR_BG_PASS,
+    COLOR_BG_FAIL,
+    COLOR_BG_NA,
+    COLOR_TEXT_PASS,
+    COLOR_TEXT_FAIL,
+    DIR_REPORTS,
+)
 
 
 # ==============================================================================
@@ -68,44 +88,127 @@ class BaseTestToolView(QWidget):
     check_changed = Signal(str, bool)  # (item_id, checked)
     note_changed = Signal(str)
 
+    # 新增 Signals
+    upload_pc_clicked = Signal()
+    upload_mobile_clicked = Signal()
+    result_changed = Signal(str)  # (new_status_text)
+    save_clicked = Signal()
+
     def __init__(self, config: dict, parent=None):
         super().__init__(parent)
         self.config = config
         self.logic = config.get("logic", "AND").upper()
         self.checks: Dict[str, QCheckBox] = {}
+        self.attachment_list = None
+        self.result_combo = None
         self._init_ui()
+
+    def _build_attachment_section(self, layout: QVBoxLayout):
+        """建立佐證資料區"""
+        g_file = QGroupBox("佐證資料 (圖片/檔案)")
+        v_file = QVBoxLayout()
+
+        h_btn = QHBoxLayout()
+        btn_pc = QPushButton("📂 加入檔案 (多選)")
+        btn_pc.clicked.connect(self.upload_pc_clicked)
+        btn_mobile = QPushButton("📱 手機拍照上傳")
+        btn_mobile.clicked.connect(self.upload_mobile_clicked)
+        h_btn.addWidget(btn_pc)
+        h_btn.addWidget(btn_mobile)
+        h_btn.addStretch()
+        v_file.addLayout(h_btn)
+
+        self.attachment_list = AttachmentListWidget()
+        self.attachment_list.setMinimumHeight(150)
+        v_file.addWidget(self.attachment_list)
+
+        g_file.setLayout(v_file)
+        layout.addWidget(g_file)
+
+    def _build_result_section(self, layout: QVBoxLayout):
+        """建立最終判定與儲存區"""
+        # Result Group
+        g3 = QGroupBox("最終判定")
+        h3 = QHBoxLayout()
+        h3.addWidget(QLabel("結果:"))
+
+        self.result_combo = QComboBox()
+        self.result_combo.addItems(
+            [STATUS_UNCHECKED, STATUS_PASS, STATUS_FAIL, STATUS_NA]
+        )
+        self.result_combo.currentTextChanged.connect(self.result_changed)
+
+        h3.addWidget(self.result_combo)
+        g3.setLayout(h3)
+        layout.addWidget(g3)
+
+        # Save Button
+        target_name = self.config.get("target_display", "Target")
+        self.btn_save = QPushButton(f"儲存 ({target_name})")
+        self.btn_save.setStyleSheet(
+            "background-color: #4CAF50; color: white; font-weight: bold; padding: 10px;"
+        )
+        self.btn_save.clicked.connect(self.save_clicked)
+        layout.addWidget(self.btn_save)
 
     def _init_ui(self):
         """建構 UI - 使用 Template Method Pattern"""
-        # 主佈局：水平排列（左：基礎 UI，右：客製化區域）
-        main_layout = QHBoxLayout(self)
+        # 主容器使用 Vertical Layout
+        main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(15)
 
-        # 左側容器：基礎測項 UI
+        # 1. 標題區 (Header)
+        target_name = self.config.get("target_display", "Target")
+        h_header = QHBoxLayout()
+        h_header.addWidget(QLabel(f"<h3>對象: {target_name}</h3>"))
+        h_header.addStretch()
+        main_layout.addLayout(h_header)
+
+        # 內容容器 (包含 Tool UI + 佐證 + 結果)
+        content_widget = QWidget()
+        content_layout = QHBoxLayout(content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(10)
+
+        # 左側：標準 Tool UI (Checklist, Note)
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(10)
 
-        # 1. 邏輯提示
+        # 1.1 邏輯提示
         self._build_logic_hint(left_layout)
 
-        # 2. 規範敘述區
+        # 1.2 規範敘述區
         self._build_narrative(left_layout)
 
-        # 3. Checkbox 區塊
+        # 1.3 Checkbox 區塊
         self._build_checklist(left_layout)
 
-        # 4. 備註區
+        # 1.4 備註區
         self._build_note_section(left_layout)
 
-        main_layout.addWidget(left_widget, stretch=1)
+        # 1.5 佐證資料區 (新增)
+        self._build_attachment_section(left_layout)
 
-        # 右側容器：客製化區域 (子類別覆寫此方法)
+        # 1.6 最終判定與儲存區 (新增)
+        self._build_result_section(left_layout)
+
+        left_layout.addStretch()
+        content_layout.addWidget(left_widget, stretch=1)
+
+        # 右側：客製化區域 (子類別覆寫此方法)
         right_widget = self._build_custom_section()
         if right_widget:
-            main_layout.addWidget(right_widget, stretch=1)
+            content_layout.addWidget(right_widget, stretch=1)
+
+        # 建立 ScrollArea 包裹內容
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(content_widget)
+        scroll.setFrameShape(QFrame.NoFrame)  # 移除邊框讓外觀更乾淨
+
+        main_layout.addWidget(scroll)
 
     def _build_logic_hint(self, layout: QVBoxLayout):
         """建立判定邏輯提示"""
@@ -266,12 +369,20 @@ class BaseTestTool(QObject):
     status_changed = Signal(str)
     checklist_changed = Signal()
 
-    def __init__(self, config, result_data, target):
+    # 新增 Signals
+    save_completed = Signal(bool, str)
+
+    def __init__(
+        self, config, result_data, target, project_manager=None, save_callback=None
+    ):
         super().__init__()
         self.config = config
         self.result_data = result_data
         self.target = target
+        self.pm = project_manager  # ProjectManager 實例
+        self.save_cb = save_callback
         self.logic = config.get("logic", "AND").upper()
+        self.item_uid = config.get("uid", config.get("id"))
 
         # 內容對照 (用於產生失敗原因)
         self.item_content_map = {}
@@ -282,7 +393,16 @@ class BaseTestTool(QObject):
         self.view = self._create_view(config)
 
         # 綁定 View 事件
+        # 綁定 View 事件
         self.view.check_changed.connect(self._on_check_changed)
+        self.view.result_changed.connect(self._on_result_changed)
+        self.view.upload_pc_clicked.connect(self._on_upload_pc)
+        self.view.upload_mobile_clicked.connect(self._on_upload_mobile)
+        self.view.save_clicked.connect(self._save)
+
+        # 綁定 PhotoServer 事件 (如果 pm 存在)
+        if self.pm:
+            self.pm.photo_received.connect(self._on_photo_received)
 
         # 載入已存資料
         if result_data:
@@ -309,12 +429,54 @@ class BaseTestTool(QObject):
         status, fail_reason = self.calculate_result()
         self.status_changed.emit(status)
 
-        if status == STATUS_FAIL:
-            self.view.set_note(fail_reason)
+        # 自動更新 UI
+        if self.view.result_combo:
+            idx = self.view.result_combo.findText(status)
+            if idx >= 0:
+                self.view.result_combo.setCurrentIndex(idx)
+
+        # 更新顏色與備註
+        self._update_result_ui(status, fail_reason)
+
+    def _on_result_changed(self, new_text: str):
+        """處理手動變更結果"""
+        self._update_result_ui(new_text)
+
+    def _update_result_ui(self, status, fail_reason=None):
+        """更新結果 UI 樣式與備註"""
+        # 更新顏色
+        if STATUS_PASS in status:
+            s = f"background-color: {COLOR_BG_PASS}; color: {COLOR_TEXT_PASS};"
+        elif STATUS_FAIL in status:
+            s = f"background-color: {COLOR_BG_FAIL}; color: {COLOR_TEXT_FAIL};"
+        elif STATUS_NA in status:
+            s = f"background-color: {COLOR_BG_NA};"
         else:
-            curr_text = self.view.get_note()
-            if "未通過" in curr_text or "未符合" in curr_text:
+            s = ""
+
+        if self.view.result_combo:
+            self.view.result_combo.setStyleSheet(s)
+
+        # 更新備註 (僅在自動判定或狀態不符時更新)
+        current_note = self.view.get_note()
+
+        if STATUS_PASS in status:
+            if not current_note or "未通過" in current_note or "不適用" in current_note:
                 self.view.set_note("符合規範要求。")
+
+        elif STATUS_FAIL in status:
+            if "符合規範" in current_note or "不適用" in current_note:
+                if not fail_reason:
+                    _, fail_reason = self.calculate_result()
+                self.view.set_note(fail_reason if fail_reason else "未通過，原因：")
+
+        elif STATUS_NA in status:
+            if (
+                not current_note
+                or "符合規範" in current_note
+                or "未通過" in current_note
+            ):
+                self.view.set_note("不適用，原因如下：\n")
 
     def calculate_result(self) -> Tuple[str, str]:
         """計算判定結果"""
@@ -350,12 +512,99 @@ class BaseTestTool(QObject):
 
     def get_result(self) -> Dict:
         """取得結果資料 (供儲存)"""
-        status, _ = self.calculate_result()
-        return {
+        # 收集基本資料
+        data = {
             "criteria": self.view.get_check_states(),
             "description": self.view.get_note(),
-            "auto_suggest_result": status,
         }
+
+        # 收集結果
+        if self.view.result_combo:
+            data["result"] = self.view.result_combo.currentText()
+
+        # 收集附件
+        if self.view.attachment_list:
+            attachments = self.view.attachment_list.get_all_attachments()
+            # 轉換為相對路徑
+            if self.pm and self.pm.current_project_path:
+                for att in attachments:
+                    full_path = att["path"]
+                    if os.path.isabs(full_path) and full_path.startswith(
+                        self.pm.current_project_path
+                    ):
+                        rel = os.path.relpath(full_path, self.pm.current_project_path)
+                        att["path"] = rel.replace("\\", "/")
+            data["attachments"] = attachments
+
+        return data
+
+    def _save(self):
+        """儲存資料"""
+        if not self.pm:
+            return
+
+        final_data = self.get_result()
+        final_data["criteria_version_snapshot"] = self.config.get("criteria_version")
+
+        if self.save_cb:
+            self.save_cb(final_data)
+        else:
+            self.pm.update_test_result(self.item_uid, self.target, final_data)
+            QMessageBox.information(self.view, "成功", "已儲存")
+
+        self.save_completed.emit(True, "Saved")
+
+    def set_project_path(self, path):
+        """相容性方法"""
+        pass
+
+    def _on_upload_pc(self):
+        """電腦上傳"""
+        if not self.pm or not self.pm.current_project_path:
+            return
+
+        files, _ = QFileDialog.getOpenFileNames(
+            self.view,
+            "選擇檔案",
+            "",
+            "All Files (*)",
+        )
+        if files:
+            img_exts = [
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".bmp",
+                ".gif",
+                ".webp",
+                ".svg",
+                ".ico",
+                ".tif",
+                ".tiff",
+                ".heic",
+            ]
+            for f_path in files:
+                rel_path = self.pm.import_file(f_path, DIR_REPORTS)
+                if rel_path:
+                    ext = os.path.splitext(f_path)[1].lower()
+                    ftype = "image" if ext in img_exts else "file"
+                    full_path = os.path.join(self.pm.current_project_path, rel_path)
+                    self.view.attachment_list.add_attachment(full_path, "", ftype)
+
+    def _on_upload_mobile(self):
+        """手機上傳"""
+        if not self.pm or not self.pm.current_project_path:
+            return
+
+        title = f"{self.item_uid} 佐證 ({self.target})"
+        url = self.pm.generate_mobile_link(self.item_uid, title, is_report=False)
+        if url:
+            QRCodeDialog(self.view, self.pm, url, title).exec()
+
+    def _on_photo_received(self, target_id, category, path):
+        """接收手機照片"""
+        if target_id == self.item_uid:
+            self.view.attachment_list.add_attachment(path, category, "image")
 
     def _load_data(self, data):
         """載入已存資料"""
@@ -368,6 +617,49 @@ class BaseTestTool(QObject):
         # 回填備註
         self.view.set_note(data.get("description", ""))
 
+        # 回填結果
+        saved_res = data.get("result", STATUS_UNCHECKED)
+        if self.view.result_combo:
+            idx = self.view.result_combo.findText(saved_res)
+            if idx >= 0:
+                self.view.result_combo.setCurrentIndex(idx)
+            self._update_result_ui(saved_res)
+
+        # 回填附件
+        attachments = data.get("attachments", [])
+        if self.view.attachment_list and self.pm and self.pm.current_project_path:
+            for item in attachments:
+                rel_path = item["path"]
+                full_path = rel_path
+                if not os.path.isabs(rel_path):
+                    full_path = os.path.join(self.pm.current_project_path, rel_path)
+
+                self.view.attachment_list.add_attachment(
+                    full_path, item.get("title", ""), item.get("type", "image")
+                )
+
     def load_data(self, data):
         """公開的載入方法"""
         self._load_data(data)
+
+
+if __name__ == "__main__":
+    import sys
+    import os
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+
+    dummy_config = {
+        "id": "test_cmd",
+        "name": "獨立測試視窗",
+        "logic": "AND",
+        "checklist": [{"id": "chk1", "content": "測試檢查點"}],
+    }
+
+    # 直接實例化 Tool (包含邏輯與控制)
+    tool = BaseTestTool(dummy_config, {}, "test_target")
+    # tool.set_project_path(os.path.join(os.path.expanduser("~"), "Desktop"))
+
+    tool.get_widget().show()
+    sys.exit(app.exec())

@@ -198,3 +198,25 @@ class NmapTestTool(CommandTestTool):
     def _load_nmap_data(self, data):
         """相容舊 API"""
         self._load_command_data(data)
+
+
+if __name__ == "__main__":
+    import sys
+    import os
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+
+    dummy_config = {
+        "id": "test_cmd",
+        "name": "獨立測試視窗",
+        "logic": "AND",
+        "checklist": [{"id": "chk1", "content": "測試檢查點"}],
+    }
+
+    # 直接實例化 Tool (包含邏輯與控制)
+    tool = NmapTestTool(dummy_config, {}, "test_target")
+    tool.set_project_path(os.path.join(os.path.expanduser("~"), "Desktop"))
+
+    tool.get_widget().show()
+    sys.exit(app.exec())
