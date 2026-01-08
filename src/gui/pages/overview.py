@@ -50,17 +50,24 @@ class OverviewPage(QWidget):
         content_widget = QWidget()
         self.layout = QVBoxLayout(content_widget)
 
+        # 專案資訊 + 檢測進度 (水平排列)
+        top_row = QWidget()
+        top_row_layout = QHBoxLayout(top_row)
+        top_row_layout.setContentsMargins(0, 0, 0, 0)
+
         # 專案資訊
         self.info_group = QGroupBox("專案資訊")
         self.info_layout = QFormLayout()
         self.info_group.setLayout(self.info_layout)
-        self.layout.addWidget(self.info_group)
+        top_row_layout.addWidget(self.info_group, 1)
 
         # 檢測進度
         self.prog_g = QGroupBox("檢測進度")
         self.prog_l = QVBoxLayout()
         self.prog_g.setLayout(self.prog_l)
-        self.layout.addWidget(self.prog_g)
+        top_row_layout.addWidget(self.prog_g, 1)
+
+        self.layout.addWidget(top_row)
 
         # 檢測照片總覽
         photo_g = QGroupBox("檢測照片總覽")
