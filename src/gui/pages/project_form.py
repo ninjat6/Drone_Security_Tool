@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from constants import DEFAULT_DESKTOP_PATH, DATE_FMT_QT
+from dialogs.bordered_dialog import BorderedDialog
 
 
 class ProjectFormController:
@@ -30,14 +31,15 @@ class ProjectFormController:
         self.existing_data = existing_data
         self.is_edit_mode = existing_data is not None
 
-        self.dialog = QDialog(parent_window)
+        self.dialog = BorderedDialog(parent_window)
         self.dialog.setWindowTitle("編輯專案" if self.is_edit_mode else "新建專案")
         self.dialog.resize(500, 600)
         self.inputs = {}
         self._init_ui()
 
     def _init_ui(self):
-        layout = QVBoxLayout(self.dialog)
+        # 取得 BorderedDialog 的內容區域佈局
+        layout = self.dialog.contentWidget().layout()
         form = QFormLayout()
         desktop = DEFAULT_DESKTOP_PATH
 
