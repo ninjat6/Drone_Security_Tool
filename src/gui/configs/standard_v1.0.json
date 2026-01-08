@@ -17,10 +17,24 @@
             "show_in_overview": true
         },
         {
-            "key": "tester",
-            "label": "檢測人員",
+            "key": "tester_1",
+            "label": "檢測人員1",
             "type": "text",
             "required": true,
+            "show_in_overview": true
+        },
+        {
+            "key": "tester_2",
+            "label": "檢測人員2",
+            "type": "text",
+            "required": false,
+            "show_in_overview": true
+        },
+        {
+            "key": "tester_3",
+            "label": "檢測人員3",
+            "type": "text",
+            "required": false,
             "show_in_overview": true
         },
         {
