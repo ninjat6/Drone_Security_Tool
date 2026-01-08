@@ -116,16 +116,15 @@ class BaseTestToolView(QWidget):
         btn_mobile.clicked.connect(self.upload_mobile_clicked)
         h_btn.addWidget(btn_pc, 1)
         h_btn.addWidget(btn_mobile, 1)
-        # h_btn.addStretch()
         v_file.addLayout(h_btn)
 
         self.attachment_list = AttachmentListWidget()
-        # self.attachment_list.setMinimumHeight(150)
-        self.attachment_list.setMaximumHeight(150)
-        v_file.addWidget(self.attachment_list)
+        self.attachment_list.setMinimumHeight(100)
+        # 移除 setMaximumHeight 限制，讓列表可以延伸
+        v_file.addWidget(self.attachment_list, stretch=1)
 
         g_file.setLayout(v_file)
-        layout.addWidget(g_file)
+        layout.addWidget(g_file, stretch=1)  # 讓整個 GroupBox 延伸填滿空間
 
     def _build_result_section(self, layout: QVBoxLayout):
         """建立最終判定與儲存區"""
@@ -182,12 +181,12 @@ class BaseTestToolView(QWidget):
         # 1.4 備註區
         self._build_note_section(left_layout)
 
-        # 1.5 佐證資料區 (新增)
+        # 1.5 佐證資料區 (延伸填滿剩餘空間)
         self._build_attachment_section(left_layout)
 
         # 最終判定與儲存會在底部固定區域處理
+        # 移除 addStretch，讓佐證資料區填滿空間
 
-        left_layout.addStretch()
         content_layout.addWidget(left_widget, stretch=1)
 
         # 右側：客製化區域 (子類別覆寫此方法)
