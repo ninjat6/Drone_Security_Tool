@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from styles import Styles
+from constants import sanitize_filename, DATE_FMT_PY_FILENAME_SHORT
 from .base import BaseTestToolView, BaseTestTool
 
 
@@ -447,8 +448,9 @@ class CommandTestTool(BaseTestTool):
             QMessageBox.warning(self.view, "錯誤", "專案路徑未設定，無法儲存截圖")
             return
 
-        # 建立 report 資料夾
-        report_dir = os.path.join(self.project_path, "reports")
+        # 取得檢測項目資料夾
+        item_folder = self.pm.get_item_folder(self.item_id, self.item_name)
+        report_dir = os.path.join(self.project_path, item_folder)
         os.makedirs(report_dir, exist_ok=True)
 
         # 擷取 result_text 的截圖 (完整內容)
@@ -487,22 +489,23 @@ class CommandTestTool(BaseTestTool):
         document.drawContents(painter)
         painter.end()
 
-        # 產生檔名
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{self._get_tool_name()}_screenshot_{timestamp}.png"
+        # 產生標題：{tool}_{command}掃描結果
+        tool_name = self._get_tool_name()
+        # cmd_short = self.last_command[:30] if self.last_command else ""
+        title = f"{tool_name}_掃描結果"
+        safe_title = sanitize_filename(title)
+
+        # 產生檔名：{yyyymmdd_hhmm}_img_{title}.png
+        timestamp = datetime.now().strftime(DATE_FMT_PY_FILENAME_SHORT)
+        filename = f"{timestamp}_img_{safe_title}.png"
         filepath = os.path.join(report_dir, filename)
 
         # 儲存截圖
         pixmap.save(filepath, "PNG")
 
-        # 產生建議標題
-        suggested_title = self._get_screenshot_title(timestamp)
-
-        # 直接加入到附件列表 (不再發送 Signal)
+        # 直接加入到附件列表
         if self.view.attachment_list:
-            # 轉換為相對於專案的顯示路徑
-            rel_path = os.path.relpath(filepath, self.project_path)
-            self.view.attachment_list.add_attachment(filepath, suggested_title, "image")
+            self.view.attachment_list.add_attachment(filepath, title, "image")
 
         QMessageBox.information(
             self.view, "截圖成功", f"完整截圖已儲存並加入佐證資料：\n{filename}"
@@ -518,13 +521,20 @@ class CommandTestTool(BaseTestTool):
             QMessageBox.warning(self.view, "錯誤", "沒有執行結果可儲存")
             return
 
-        # 建立 report 資料夾
-        report_dir = os.path.join(self.project_path, "reports")
+        # 取得檢測項目資料夾
+        item_folder = self.pm.get_item_folder(self.item_id, self.item_name)
+        report_dir = os.path.join(self.project_path, item_folder)
         os.makedirs(report_dir, exist_ok=True)
 
-        # 產生檔名
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{self._get_tool_name()}_log_{timestamp}.txt"
+        # 產生標題：{tool}_{command}執行紀錄
+        tool_name = self._get_tool_name()
+        cmd_short = self.last_command[:30] if self.last_command else ""
+        title = f"{tool_name}_{cmd_short}執行紀錄"
+        safe_title = sanitize_filename(title)
+
+        # 產生檔名：{yyyymmdd_hhmm}_log_{title}.txt
+        timestamp = datetime.now().strftime(DATE_FMT_PY_FILENAME_SHORT)
+        filename = f"{timestamp}_log_{safe_title}.txt"
         filepath = os.path.join(report_dir, filename)
 
         # 儲存 log
@@ -535,13 +545,10 @@ class CommandTestTool(BaseTestTool):
             f.write(f"# ===================================\n\n")
             f.write(self.last_result)
 
-        # 產生建議標題
-        suggested_title = f"指令執行紀錄 ({timestamp})"
-
         # 加入到附件列表 (使用 type: "log" 和 command 欄位)
         if self.view.attachment_list:
             self.view.attachment_list.add_attachment_with_extra(
-                filepath, suggested_title, "log", {"command": self.last_command}
+                filepath, title, "log", {"command": self.last_command}
             )
 
         QMessageBox.information(

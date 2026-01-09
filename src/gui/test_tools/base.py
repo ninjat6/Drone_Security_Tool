@@ -402,6 +402,8 @@ class BaseTestTool(QObject):
         self.save_cb = save_callback
         self.logic = config.get("logic", "AND").upper()
         self.item_uid = config.get("uid", config.get("id"))
+        self.item_id = config.get("id", "")      # 檢測項目 ID (6.2.1)
+        self.item_name = config.get("name", "")  # 檢測項目名稱 (身分鑑別)
 
         # 內容對照 (用於產生失敗原因)
         self.item_content_map = {}
@@ -411,7 +413,10 @@ class BaseTestTool(QObject):
         # 建立 View
         self.view = self._create_view(config)
 
-        # 綁定 View 事件
+        # 設定 attachment_list 的 ProjectManager 參考
+        if self.view.attachment_list and self.pm:
+            self.view.attachment_list.set_project_manager(self.pm)
+
         # 綁定 View 事件
         self.view.check_changed.connect(self._on_check_changed)
         self.view.result_changed.connect(self._on_result_changed)
@@ -562,6 +567,10 @@ class BaseTestTool(QObject):
         if not self.pm:
             return
 
+        # 儲存前先處理重命名（讓 JSON 記錄新的檔案路徑）
+        if self.view.attachment_list:
+            self.view.attachment_list.flush_pending_renames()
+
         final_data = self.get_result()
         final_data["criteria_version_snapshot"] = self.config.get("criteria_version")
 
@@ -570,6 +579,10 @@ class BaseTestTool(QObject):
         else:
             self.pm.update_test_result(self.item_uid, self.target, final_data)
             QMessageBox.information(self.view, "成功", "已儲存")
+
+        # 儲存成功後，執行延遲刪除（將待刪除檔案移到 trash）
+        if self.view.attachment_list:
+            self.view.attachment_list.flush_pending_trash()
 
         self.save_completed.emit(True, "Saved")
 
@@ -603,12 +616,24 @@ class BaseTestTool(QObject):
                 ".heic",
             ]
             for f_path in files:
-                rel_path = self.pm.import_file(f_path, DIR_REPORTS)
+                ext = os.path.splitext(f_path)[1].lower()
+                ftype = "img" if ext in img_exts else "file"
+                
+                # 使用原檔名 (去除副檔名) 作為標題
+                title = os.path.splitext(os.path.basename(f_path))[0]
+                
+                # 使用新的 import_attachment 方法
+                rel_path = self.pm.import_attachment(
+                    f_path,
+                    self.item_id,
+                    self.item_name,
+                    file_type=ftype,
+                    title=title,
+                )
                 if rel_path:
-                    ext = os.path.splitext(f_path)[1].lower()
-                    ftype = "image" if ext in img_exts else "file"
                     full_path = os.path.join(self.pm.current_project_path, rel_path)
-                    self.view.attachment_list.add_attachment(full_path, "", ftype)
+                    display_type = "image" if ftype == "img" else "file"
+                    self.view.attachment_list.add_attachment(full_path, title, display_type)
 
     def _on_upload_mobile(self):
         """手機上傳"""

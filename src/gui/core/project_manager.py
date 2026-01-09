@@ -22,6 +22,7 @@ from constants import (
     DATE_FMT_PY_FILENAME_SHORT,
     DIR_IMAGES,
     DIR_REPORTS,
+    DIR_TRASH,
     TARGET_UAV,
     TARGET_GCS,
     TARGETS,
@@ -31,6 +32,7 @@ from constants import (
     STATUS_UNCHECKED,
     STATUS_NOT_TESTED,
     STATUS_UNKNOWN,
+    sanitize_filename,
 )
 from infrastructure.photo_server import PhotoServer
 
@@ -137,54 +139,54 @@ class ProjectManager(QObject):
 
         return report
 
-    def apply_version_switch(self, new_config, migration_report):
-        self.save_snapshot("before_switch")
-        old_tests_data = self.project_data.get("tests", {})
-        new_tests_data = {}
-        new_item_map = {}
-        for sec in new_config["test_standards"]:
-            for item in sec["items"]:
-                new_item_map[item["uid"]] = item
+    # def apply_version_switch(self, new_config, migration_report):
+    #     self.save_snapshot("before_switch")
+    #     old_tests_data = self.project_data.get("tests", {})
+    #     new_tests_data = {}
+    #     new_item_map = {}
+    #     for sec in new_config["test_standards"]:
+    #         for item in sec["items"]:
+    #             new_item_map[item["uid"]] = item
 
-        for row in migration_report:
-            uid = row["uid"]
-            status = row["status"]
-            if status == "REMOVE":
-                continue
-            new_item_def = new_item_map.get(uid)
-            new_ver = (
-                new_item_def.get("criteria_version") if new_item_def else "unknown"
-            )
+    #     for row in migration_report:
+    #         uid = row["uid"]
+    #         status = row["status"]
+    #         if status == "REMOVE":
+    #             continue
+    #         new_item_def = new_item_map.get(uid)
+    #         new_ver = (
+    #             new_item_def.get("criteria_version") if new_item_def else "unknown"
+    #         )
 
-            if status == "NEW":
-                new_tests_data[uid] = {}  # 初始化
-            elif status == "MATCH":
-                new_tests_data[uid] = old_tests_data[uid].copy()
-            elif status == "RESET":
-                if uid in old_tests_data:
-                    old_entry = old_tests_data[uid]
-                    new_entry = {}
-                    for target in TARGETS:
-                        if target in old_entry:
-                            new_entry[target] = {}
-                            new_entry[target]["attachments"] = old_entry[target].get(
-                                "attachments", []
-                            )
-                            new_entry[target]["result"] = STATUS_UNCHECKED
-                            new_entry[target]["criteria_version_snapshot"] = new_ver
+    #         if status == "NEW":
+    #             new_tests_data[uid] = {}  # 初始化
+    #         elif status == "MATCH":
+    #             new_tests_data[uid] = old_tests_data[uid].copy()
+    #         elif status == "RESET":
+    #             if uid in old_tests_data:
+    #                 old_entry = old_tests_data[uid]
+    #                 new_entry = {}
+    #                 for target in TARGETS:
+    #                     if target in old_entry:
+    #                         new_entry[target] = {}
+    #                         new_entry[target]["attachments"] = old_entry[target].get(
+    #                             "attachments", []
+    #                         )
+    #                         new_entry[target]["result"] = STATUS_UNCHECKED
+    #                         new_entry[target]["criteria_version_snapshot"] = new_ver
 
-                    # 複製 Meta
-                    if "__meta__" in old_entry:
-                        new_entry["__meta__"] = old_entry["__meta__"].copy()
+    #                 # 複製 Meta
+    #                 if "__meta__" in old_entry:
+    #                     new_entry["__meta__"] = old_entry["__meta__"].copy()
 
-                    new_tests_data[uid] = new_entry
+    #                 new_tests_data[uid] = new_entry
 
-        self.project_data["standard_name"] = new_config.get("standard_name")
-        self.project_data["standard_version"] = new_config.get("standard_version")
-        self.project_data["tests"] = new_tests_data
-        self.set_standard_config(new_config)
-        self.save_all()
-        self.data_changed.emit()
+    #     self.project_data["standard_name"] = new_config.get("standard_name")
+    #     self.project_data["standard_version"] = new_config.get("standard_version")
+    #     self.project_data["tests"] = new_tests_data
+    #     self.set_standard_config(new_config)
+    #     self.save_all()
+    #     self.data_changed.emit()
 
     def handle_mobile_photo(self, target_id, category, full_path):
         if self.current_project_path:
@@ -486,6 +488,196 @@ class ProjectManager(QObject):
             return f"{sub_folder}/{new_filename}"
         except Exception as e:
             print(f"複製檔案失敗: {e}")
+            return None
+
+    def get_item_folder(self, item_id: str, item_name: str) -> str:
+        """
+        取得檢測項目的佐證資料夾路徑
+        格式：reports/{item_id}_{item_name}/
+        """
+        safe_name = sanitize_filename(item_name)
+        folder_name = f"{item_id}_{safe_name}"
+        return os.path.join(DIR_REPORTS, folder_name)
+
+    def import_attachment(
+        self,
+        src_path: str,
+        item_id: str,
+        item_name: str,
+        file_type: str = "img",
+        title: str = "",
+    ) -> Optional[str]:
+        """
+        匯入佐證資料到檢測項目資料夾
+        
+        Args:
+            src_path: 來源檔案路徑
+            item_id: 檢測項目 ID (如 6.2.1)
+            item_name: 檢測項目名稱 (如 身分鑑別)
+            file_type: 檔案類型 (img, log, file)
+            title: 檔案標題 (用於檔名)
+        
+        Returns:
+            相對路徑或 None
+        
+        檔名格式：{yyyymmdd_hhmm}_{type}_{title}.{ext}
+        """
+        if not self.current_project_path:
+            return None
+        
+        try:
+            # 取得副檔名
+            _, ext = os.path.splitext(src_path)
+            ext = ext.lower()
+            
+            # 產生時間戳
+            ts = datetime.now().strftime(DATE_FMT_PY_FILENAME_SHORT)
+            
+            # 處理標題 (如果沒有標題，使用原檔名)
+            if not title:
+                title = os.path.splitext(os.path.basename(src_path))[0]
+            safe_title = sanitize_filename(title)
+            
+            # 組合檔名
+            new_filename = f"{ts}_{file_type}_{safe_title}{ext}"
+            
+            # 取得目標資料夾
+            item_folder = self.get_item_folder(item_id, item_name)
+            target_dir = os.path.join(self.current_project_path, item_folder)
+            
+            if not os.path.exists(target_dir):
+                os.makedirs(target_dir)
+            
+            dest_path = os.path.join(target_dir, new_filename)
+            
+            # 如果檔案已存在，加上序號
+            if os.path.exists(dest_path):
+                base, ext = os.path.splitext(new_filename)
+                counter = 1
+                while os.path.exists(dest_path):
+                    dest_path = os.path.join(target_dir, f"{base}_{counter}{ext}")
+                    counter += 1
+            
+            shutil.copy2(src_path, dest_path)
+            
+            # 回傳相對路徑
+            rel_path = os.path.relpath(dest_path, self.current_project_path)
+            return rel_path.replace("\\", "/")
+            
+        except Exception as e:
+            print(f"匯入附件失敗: {e}")
+            return None
+
+    def move_to_trash(self, file_path: str) -> bool:
+        """
+        將檔案移動到同層的 trash 資料夾
+        
+        Args:
+            file_path: 絕對路徑或相對於專案的路徑
+        
+        Returns:
+            是否成功
+        """
+        if not self.current_project_path:
+            return False
+        
+        try:
+            # 處理相對路徑
+            if not os.path.isabs(file_path):
+                file_path = os.path.join(self.current_project_path, file_path)
+            
+            if not os.path.exists(file_path):
+                return False
+            
+            # 取得檔案所在資料夾和檔名
+            file_dir = os.path.dirname(file_path)
+            filename = os.path.basename(file_path)
+            
+            # 建立 trash 資料夾
+            trash_dir = os.path.join(file_dir, DIR_TRASH)
+            if not os.path.exists(trash_dir):
+                os.makedirs(trash_dir)
+            
+            # 移動檔案
+            dest_path = os.path.join(trash_dir, filename)
+            
+            # 如果 trash 中已有同名檔案，加上時間戳
+            if os.path.exists(dest_path):
+                ts = datetime.now().strftime(DATE_FMT_PY_FILENAME_SHORT)
+                base, ext = os.path.splitext(filename)
+                dest_path = os.path.join(trash_dir, f"{base}_{ts}{ext}")
+            
+            shutil.move(file_path, dest_path)
+            return True
+            
+        except Exception as e:
+            print(f"移動到 trash 失敗: {e}")
+            return False
+
+    def rename_attachment(self, old_path: str, new_title: str) -> Optional[str]:
+        """
+        根據新標題重命名附件檔案
+        
+        檔名格式：{timestamp}_{type}_{title}.{ext}
+        只更改 title 部分，保留 timestamp 和 type
+        
+        Args:
+            old_path: 原始檔案路徑（絕對或相對）
+            new_title: 新的標題
+        
+        Returns:
+            新的絕對路徑，或 None（如果失敗）
+        """
+        if not self.current_project_path:
+            return None
+        
+        try:
+            # 處理相對路徑
+            if not os.path.isabs(old_path):
+                old_path = os.path.join(self.current_project_path, old_path)
+            
+            if not os.path.exists(old_path):
+                return None
+            
+            file_dir = os.path.dirname(old_path)
+            old_filename = os.path.basename(old_path)
+            
+            # 解析原檔名：{timestamp}_{type}_{title}.{ext}
+            # 例如：20260108_1615_img_Nmap_掃描結果.png
+            base, ext = os.path.splitext(old_filename)
+            parts = base.split("_", 2)  # 最多分割成 3 部分
+            
+            if len(parts) >= 2:
+                # 有 timestamp_type 前綴
+                timestamp = parts[0]
+                file_type = parts[1] if len(parts) > 1 else "img"
+            else:
+                # 沒有標準格式，使用當前時間
+                timestamp = datetime.now().strftime(DATE_FMT_PY_FILENAME_SHORT)
+                file_type = "img"
+            
+            # 產生新檔名
+            safe_title = sanitize_filename(new_title)
+            new_filename = f"{timestamp}_{file_type}_{safe_title}{ext}"
+            new_path = os.path.join(file_dir, new_filename)
+            
+            # 如果檔名沒變，直接回傳
+            if old_path == new_path:
+                return old_path
+            
+            # 如果新檔名已存在，加上序號
+            if os.path.exists(new_path):
+                counter = 1
+                while os.path.exists(new_path):
+                    new_filename = f"{timestamp}_{file_type}_{safe_title}_{counter}{ext}"
+                    new_path = os.path.join(file_dir, new_filename)
+                    counter += 1
+            
+            os.rename(old_path, new_path)
+            return new_path
+            
+        except Exception as e:
+            print(f"重命名附件失敗: {e}")
             return None
 
     def merge_external_project(self, source_folder: str) -> Tuple[bool, str]:

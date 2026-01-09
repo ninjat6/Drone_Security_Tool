@@ -13,7 +13,19 @@ CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
 PROJECT_SETTINGS_FILENAME = "project_settings.json"
 DIR_IMAGES = "images"
 DIR_REPORTS = "reports"
+DIR_TRASH = "trash"
 DEFAULT_DESKTOP_PATH = os.path.join(os.path.expanduser("~"), "Desktop")
+
+# 檔名中不允許的字元
+UNSAFE_FILENAME_CHARS = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+
+
+def sanitize_filename(name: str) -> str:
+    """將檔名中的特殊字元替換為底線"""
+    result = name
+    for char in UNSAFE_FILENAME_CHARS:
+        result = result.replace(char, "_")
+    return result.strip()
 
 # ==============================================================================
 # 專案類型與預設值
