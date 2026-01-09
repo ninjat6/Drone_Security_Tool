@@ -445,33 +445,33 @@ class MainApp(BorderedMainWindow):
     #         QMessageBox.critical(self, "遷移失敗", f"無法切換至此版本：\n{str(e)}")
 
     # def on_restore_snapshot(self):
-        snaps = self.pm.list_snapshots()
-        if not snaps:
-            QMessageBox.information(self, "無快照", "目前沒有備份快照。")
-            return
-        item, ok = QInputDialog.getItem(
-            self, "還原快照", "請選擇要還原的時間點：", snaps, 0, False
-        )
-        if ok and item:
-            if (
-                QMessageBox.question(self, "確認", "還原將覆蓋目前的進度，確定嗎？")
-                == QMessageBox.Yes
-            ):
-                ok, msg = self.pm.restore_snapshot(item)
-                if ok:
-                    std_name = self.pm.project_data.get("standard_name")
-                    target_config = self.config_mgr.find_config_by_name(std_name)
-                    if target_config:
-                        self.config = target_config
-                        self.rebuild_ui_from_config()
-                        self.project_ready()
-                        QMessageBox.information(self, "成功", "專案已還原")
-                    else:
-                        QMessageBox.warning(
-                            self, "警告", "還原成功，但找不到對應的規範 JSON。"
-                        )
-                else:
-                    QMessageBox.warning(self, "失敗", msg)
+    #     snaps = self.pm.list_snapshots()
+    #     if not snaps:
+    #         QMessageBox.information(self, "無快照", "目前沒有備份快照。")
+    #         return
+    #     item, ok = QInputDialog.getItem(
+    #         self, "還原快照", "請選擇要還原的時間點：", snaps, 0, False
+    #     )
+    #     if ok and item:
+    #         if (
+    #             QMessageBox.question(self, "確認", "還原將覆蓋目前的進度，確定嗎？")
+    #             == QMessageBox.Yes
+    #         ):
+    #             ok, msg = self.pm.restore_snapshot(item)
+    #             if ok:
+    #                 std_name = self.pm.project_data.get("standard_name")
+    #                 target_config = self.config_mgr.find_config_by_name(std_name)
+    #                 if target_config:
+    #                     self.config = target_config
+    #                     self.rebuild_ui_from_config()
+    #                     self.project_ready()
+    #                     QMessageBox.information(self, "成功", "專案已還原")
+    #                 else:
+    #                     QMessageBox.warning(
+    #                         self, "警告", "還原成功，但找不到對應的規範 JSON。"
+    #                     )
+    #             else:
+    #                 QMessageBox.warning(self, "失敗", msg)
 
     def on_merge(self):
         d = QFileDialog.getExistingDirectory(self, "選匯入目錄")
