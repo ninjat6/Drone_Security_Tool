@@ -160,9 +160,10 @@
                     "uid": "test_uid",
                     "criteria_version": "test_criteria_version",
                     "targets": [
-                        "UAV"
+                        "UAV",
+                        "GCS"
                     ],
-                    "logic": "AND",
+                    "logic": "OR",
                     "narrative": {
                         "purpose": "test_purpose",
                         "method": "test_method",
@@ -174,7 +175,11 @@
                     "checklist": [
                         {
                             "id": "c1",
-                            "content": "test_checklist"
+                            "content": "test_checklist_1"
+                        },
+                        {
+                            "id": "c2",
+                            "content": "test_checklist_2"
                         }
                     ]
                 }
