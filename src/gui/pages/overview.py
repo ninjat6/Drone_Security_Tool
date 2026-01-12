@@ -82,9 +82,10 @@ class OverviewPage(QWidget):
             lbl_title.setStyleSheet("font-weight: bold; font-size: 16pt; padding: 5px;")
             self.photo_grid.addWidget(lbl_title, 0, col, 1, 1)
 
-            btn_mobile = QPushButton(f"📱 上傳 {t.upper()} 照片 (含各角度)")
-            btn_mobile.clicked.connect(partial(self.up_photo_mobile, t))
-            self.photo_grid.addWidget(btn_mobile, 1, col, 1, 1)
+            self.photo_grid.addWidget(lbl_title, 0, col, 1, 1)
+
+            # btn_mobile removed
+
 
             front_key = f"{t}_{PHOTO_ANGLES_ORDER[0]}"
             front_container = QWidget()
@@ -221,16 +222,7 @@ class OverviewPage(QWidget):
             w.setLayout(h)
             self.prog_l.addWidget(w)
 
-    def up_photo_mobile(self, target):
-        if not self.pm.current_project_path:
-            QMessageBox.warning(self, "警告", "請先建立或開啟專案")
-            return
-        title = f"{target.upper()} 照片上傳"
-        url = self.pm.generate_mobile_link(target, title, is_report=True)
-        if url:
-            QRCodeDialog(self, self.pm, url, title).exec()
-        else:
-            QMessageBox.critical(self, "錯誤", "無法生成連結")
+
 
     def open_gallery(self, target):
         if not self.pm.current_project_path:

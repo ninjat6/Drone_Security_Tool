@@ -90,7 +90,7 @@ class BaseTestToolView(QWidget):
 
     # 新增 Signals
     upload_pc_clicked = Signal()
-    upload_mobile_clicked = Signal()
+
     result_changed = Signal(str)  # (new_status_text)
     save_clicked = Signal()
 
@@ -112,10 +112,8 @@ class BaseTestToolView(QWidget):
         h_btn = QHBoxLayout()
         btn_pc = QPushButton("📂 加入檔案 (多選)")
         btn_pc.clicked.connect(self.upload_pc_clicked)
-        btn_mobile = QPushButton("📱 手機拍照上傳")
-        btn_mobile.clicked.connect(self.upload_mobile_clicked)
+        # btn_mobile removed
         h_btn.addWidget(btn_pc, 1)
-        h_btn.addWidget(btn_mobile, 1)
         v_file.addLayout(h_btn)
 
         self.attachment_list = AttachmentListWidget()
@@ -423,7 +421,7 @@ class BaseTestTool(QObject):
         self.view.check_changed.connect(self._on_check_changed)
         self.view.result_changed.connect(self._on_result_changed)
         self.view.upload_pc_clicked.connect(self._on_upload_pc)
-        self.view.upload_mobile_clicked.connect(self._on_upload_mobile)
+        # self.view.upload_mobile_clicked connection removed
         self.view.save_clicked.connect(self._save)
 
         # 綁定 PhotoServer 事件 (如果 pm 存在)
@@ -650,15 +648,7 @@ class BaseTestTool(QObject):
                     display_type = "image" if ftype == "img" else "file"
                     self.view.attachment_list.add_attachment(full_path, title, display_type)
 
-    def _on_upload_mobile(self):
-        """手機上傳"""
-        if not self.pm or not self.pm.current_project_path:
-            return
 
-        title = f"{self.item_uid} 佐證 ({self.target})"
-        url = self.pm.generate_mobile_link(self.item_uid, title, is_report=False)
-        if url:
-            QRCodeDialog(self.view, self.pm, url, title).exec()
 
     def _on_photo_received(self, item_uid, target, path, title):
         """接收手機照片"""
