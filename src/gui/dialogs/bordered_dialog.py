@@ -126,6 +126,7 @@ class BorderedDialog(QDialog):
 
         # 內容區域
         self._content_widget = QWidget()
+        self._content_widget.setMouseTracking(True)
         self._content_layout = QVBoxLayout(self._content_widget)
         self._content_layout.setContentsMargins(10, 10, 10, 10)
         self._frame_layout.addWidget(self._content_widget)
