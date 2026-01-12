@@ -580,11 +580,21 @@ class BaseTestTool(QObject):
             self.save_cb(final_data)
         else:
             self.pm.update_test_result(self.item_uid, self.target, final_data)
-            QMessageBox.information(self.view, "成功", "已儲存")
+            
+            # 儲存成功後，執行延遲刪除（將待刪除檔案移到 trash）
+            if self.view.attachment_list:
+                self.view.attachment_list.flush_pending_trash()
 
-        # 儲存成功後，執行延遲刪除（將待刪除檔案移到 trash）
-        if self.view.attachment_list:
-            self.view.attachment_list.flush_pending_trash()
+            # 刷新 UI：重新載入資料以確保介面與儲存結果一致 (例如 timestamp, 檔名)
+            saved_data = self.pm.get_test_result(self.item_uid, self.target)
+            
+            # 必須先清空附件列表，避免重複添加
+            if self.view.attachment_list:
+                self.view.attachment_list.clear()
+            
+            self.load_data(saved_data)
+
+            QMessageBox.information(self.view, "成功", "已儲存")
 
         self.save_completed.emit(True, "Saved")
 
@@ -650,10 +660,10 @@ class BaseTestTool(QObject):
         if url:
             QRCodeDialog(self.view, self.pm, url, title).exec()
 
-    def _on_photo_received(self, target_id, category, path):
+    def _on_photo_received(self, item_uid, target, path, title):
         """接收手機照片"""
-        if target_id == self.item_uid:
-            self.view.attachment_list.add_attachment(path, category, "image")
+        if item_uid == self.item_uid:
+            self.view.attachment_list.add_attachment(path, title, "image")
 
     def _load_data(self, data):
         """載入已存資料"""

@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"
+        />
+        <title>📱 手機助手</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                color: #333;
+            }
+            .container {
+                max-width: 100%;
+                padding: 20px;
+            }
+            .card {
+                background: white;
+                border-radius: 16px;
+                padding: 20px;
+                margin-bottom: 15px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+                color: white;
+                text-align: center;
+                margin: 20px 0;
+                font-size: 1.5rem;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            }
+            h2 {
+                margin: 0 0 15px 0;
+                font-size: 1.1rem;
+                color: #444;
+            }
+            .project-name {
+                font-size: 0.9rem;
+                color: #666;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .menu-btn {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                padding: 18px 20px;
+                background: #f8f9fa;
+                border: none;
+                border-radius: 12px;
+                width: 100%;
+                font-size: 16px;
+                cursor: pointer;
+                margin-bottom: 10px;
+                transition: all 0.2s;
+            }
+            .menu-btn:hover,
+            .menu-btn:active {
+                background: #e9ecef;
+                transform: scale(0.98);
+            }
+            .menu-btn .icon {
+                font-size: 28px;
+            }
+            .menu-btn .text {
+                flex: 1;
+                text-align: left;
+            }
+            .menu-btn .arrow {
+                color: #aaa;
+                font-size: 20px;
+            }
+            .item-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .item-list li {
+                padding: 15px;
+                border-bottom: 1px solid #eee;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                cursor: pointer;
+            }
+            .item-list li:last-child {
+                border-bottom: none;
+            }
+            .item-list li:hover {
+                background: #f8f9fa;
+            }
+            .item-id {
+                font-weight: bold;
+                color: #667eea;
+                min-width: 50px;
+            }
+            .item-name {
+                flex: 1;
+            }
+            .item-status {
+                font-size: 12px;
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+            .status-done {
+                background: #d4edda;
+                color: #155724;
+            }
+            .status-pending {
+                background: #fff3cd;
+                color: #856404;
+            }
+            .back-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                color: white;
+                text-decoration: none;
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            .hidden {
+                display: none !important;
+            }
+            #loading {
+                text-align: center;
+                padding: 40px;
+                color: white;
+            }
+            /* 上傳頁樣式 */
+            .upload-header {
+                background: #667eea;
+                color: white;
+                padding: 15px;
+                margin: -20px -20px 20px -20px;
+                border-radius: 16px 16px 0 0;
+            }
+            .upload-header h3 {
+                margin: 0;
+                font-size: 1rem;
+            }
+            .upload-header .subtitle {
+                font-size: 0.8rem;
+                opacity: 0.8;
+                margin-top: 5px;
+            }
+            .form-group {
+                margin-bottom: 15px;
+            }
+            .form-group label {
+                display: block;
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #555;
+            }
+            .form-group select,
+            .form-group input[type="text"] {
+                width: 100%;
+                padding: 12px;
+                font-size: 16px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+            }
+            .btn {
+                display: block;
+                width: 100%;
+                padding: 14px;
+                font-size: 16px;
+                font-weight: bold;
+                color: white;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                margin: 8px 0;
+            }
+            .btn-primary {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+            }
+            .btn-success {
+                background: #28a745;
+            }
+            .btn-secondary {
+                background: #6c757d;
+            }
+            .btn-danger {
+                background: #dc3545;
+            }
+            .btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .btn-row {
+                display: flex;
+                gap: 10px;
+            }
+            .btn-row .btn {
+                margin: 0;
+            }
+            /* 圖片編輯 */
+            .img-container {
+                width: 100%;
+                height: 50vh;
+                background: #333;
+                border-radius: 8px;
+                overflow: hidden;
+                margin-bottom: 10px;
+            }
+            .img-container img {
+                max-width: 100%;
+                display: block;
+            }
+            .canvas-wrapper {
+                width: 100%;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                background: #fff;
+                margin-bottom: 10px;
+                display: flex;
+                justify-content: center;
+                overflow: hidden;
+            }
+            .controls-panel {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 10px;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            .control-item {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 14px;
+            }
+            input[type="color"] {
+                border: none;
+                width: 40px;
+                height: 35px;
+                cursor: pointer;
+                background: none;
+            }
+            input[type="range"] {
+                width: 80px;
+            }
+            #status {
+                text-align: center;
+                font-weight: bold;
+                padding: 10px;
+                color: #666;
+            }
+        </style>
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
+        />
+    </head>
+    <body>
+        <div class="container">
+            <!-- 首頁 -->
+            <div id="page-home">
+                <h1>📱 手機助手</h1>
+                <p class="project-name" id="project-name">載入中...</p>
+                <div class="card">
+                    <button class="menu-btn" onclick="showPage('overview')">
+                        <span class="icon">📷</span>
+                        <span class="text"
+                            >總覽照片<br /><small style="color: #888"
+                                >UAV / GCS 六面照</small
+                            ></span
+                        >
+                        <span class="arrow">›</span>
+                    </button>
+                    <button class="menu-btn" onclick="showPage('items')">
+                        <span class="icon">📋</span>
+                        <span class="text"
+                            >測項佐證<br /><small style="color: #888"
+                                >檢測項目附件</small
+                            ></span
+                        >
+                        <span class="arrow">›</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 總覽照片頁 -->
+            <div id="page-overview" class="hidden">
+                <a
+                    href="#"
+                    class="back-btn"
+                    onclick="showPage('home'); return false;"
+                    >← 返回</a
+                >
+                <h1>📷 總覽照片</h1>
+                <div class="card">
+                    <div class="form-group">
+                        <label>選擇目標</label>
+                        <select id="overview-target">
+                            <option value="UAV">UAV (無人機)</option>
+                            <option value="GCS">GCS (地面站)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>選擇視角</label>
+                        <select id="overview-angle">
+                            <option value="front">正面 (Front)</option>
+                            <option value="back">背面 (Back)</option>
+                            <option value="side1">側面1 (Side 1)</option>
+                            <option value="side2">側面2 (Side 2)</option>
+                            <option value="top">上方 (Top)</option>
+                            <option value="bottom">下方 (Bottom)</option>
+                        </select>
+                    </div>
+                    <input
+                        type="file"
+                        id="overview-file"
+                        accept="image/*"
+                        style="display: none"
+                        onchange="onOverviewFileSelected(event)"
+                    />
+                    <button
+                        class="btn btn-primary"
+                        onclick="document.getElementById('overview-file').click()"
+                    >
+                        📷 拍照或選取照片
+                    </button>
+                </div>
+            </div>
+
+            <!-- 測項列表頁 -->
+            <div id="page-items" class="hidden">
+                <a
+                    href="#"
+                    class="back-btn"
+                    onclick="showPage('home'); return false;"
+                    >← 返回</a
+                >
+                <h1>📋 測項佐證</h1>
+                <div class="card">
+                    <ul class="item-list" id="item-list">
+                        <li>載入中...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 上傳頁（測項佐證） -->
+            <div id="page-upload" class="hidden">
+                <a
+                    href="#"
+                    class="back-btn"
+                    onclick="showPage('items'); return false;"
+                    >← 返回測項列表</a
+                >
+                <div class="card">
+                    <div class="upload-header">
+                        <h3 id="upload-item-name">測項名稱</h3>
+                        <div class="subtitle" id="upload-item-id">ID</div>
+                    </div>
+
+                    <!-- Step 0: 選擇 -->
+                    <div id="upload-step0">
+                        <div class="form-group" id="target-select-group">
+                            <label>選擇目標</label>
+                            <select id="upload-target">
+                                <option value="UAV">UAV</option>
+                                <option value="GCS">GCS</option>
+                                <option value="Shared">共用</option>
+                            </select>
+                        </div>
+                        <input
+                            type="file"
+                            id="upload-file"
+                            accept="image/*"
+                            style="display: none"
+                            onchange="onUploadFileSelected(event)"
+                        />
+                        <button
+                            class="btn btn-primary"
+                            onclick="document.getElementById('upload-file').click()"
+                        >
+                            📷 拍照或選取照片
+                        </button>
+                    </div>
+
+                    <!-- Step 1: 裁剪 -->
+                    <div id="upload-step1" class="hidden">
+                        <div class="img-container">
+                            <img id="image-to-crop" src="" />
+                        </div>
+                        <div class="btn-row">
+                            <button
+                                class="btn btn-secondary"
+                                onclick="resetUpload()"
+                            >
+                                取消
+                            </button>
+                            <button
+                                class="btn btn-primary"
+                                onclick="finishCrop()"
+                            >
+                                下一步 ➡️
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: 標記 -->
+                    <div id="upload-step2" class="hidden">
+                        <div class="form-group">
+                            <label>圖片標題</label>
+                            <input
+                                type="text"
+                                id="upload-title"
+                                placeholder="輸入標題（選填）"
+                            />
+                        </div>
+                        <div class="controls-panel">
+                            <div class="control-item">
+                                顏色:
+                                <input
+                                    type="color"
+                                    id="line-color"
+                                    value="#ff0000"
+                                />
+                            </div>
+                            <div class="control-item">
+                                粗細:
+                                <input
+                                    type="range"
+                                    id="line-width"
+                                    min="1"
+                                    max="15"
+                                    value="5"
+                                /><span id="width-val">5</span>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="fabric-canvas"></canvas>
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn btn-danger" onclick="addRect()">
+                                + 框線
+                            </button>
+                            <button
+                                class="btn btn-secondary"
+                                onclick="removeActiveObject()"
+                            >
+                                刪除
+                            </button>
+                        </div>
+                        <div id="status"></div>
+                        <div class="btn-row" style="margin-top: 15px">
+                            <button
+                                class="btn btn-secondary"
+                                onclick="backToCrop()"
+                            >
+                                ⬅️ 重裁
+                            </button>
+                            <button
+                                class="btn btn-success"
+                                id="btn-upload"
+                                onclick="doUpload()"
+                            >
+                                ☁️ 上傳
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading" class="hidden">載入中...</div>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+        <script>
+            // 全域變數
+            let projectData = null;
+            let currentItem = null;
+            let cropper = null;
+            let fabricCanvas = null;
+            let originalImageWidth = 0;
+            let uploadMode = "item"; // 'item' or 'overview'
+
+            // 初始化
+            async function init() {
+                try {
+                    const res = await fetch("/api/project");
+                    projectData = await res.json();
+                    document.getElementById("project-name").innerText =
+                        projectData.name || "未命名專案";
+                    renderItemList();
+                } catch (e) {
+                    document.getElementById("project-name").innerText =
+                        "連線失敗";
+                    console.error(e);
+                }
+            }
+
+            // 頁面切換
+            function showPage(page) {
+                document
+                    .querySelectorAll('[id^="page-"]')
+                    .forEach((el) => el.classList.add("hidden"));
+                document
+                    .getElementById("page-" + page)
+                    .classList.remove("hidden");
+            }
+
+            // 渲染測項列表
+            function renderItemList() {
+                const list = document.getElementById("item-list");
+                if (
+                    !projectData ||
+                    !projectData.items ||
+                    projectData.items.length === 0
+                ) {
+                    list.innerHTML = "<li>沒有測項</li>";
+                    return;
+                }
+                list.innerHTML = projectData.items
+                    .map(
+                        (item) => `
+                <li onclick="selectItem('${item.uid}')">
+                    <span class="item-id">${item.id}</span>
+                    <span class="item-name">${item.name}</span>
+                    <span class="arrow">›</span>
+                </li>
+            `
+                    )
+                    .join("");
+            }
+
+            // 選擇測項
+            function selectItem(uid) {
+                currentItem = projectData.items.find((i) => i.uid === uid);
+                if (!currentItem) return;
+
+                document.getElementById("upload-item-name").innerText =
+                    currentItem.name;
+                document.getElementById("upload-item-id").innerText =
+                    currentItem.id;
+
+                // 設定目標選擇
+                const targetSelect = document.getElementById("upload-target");
+                const targetGroup = document.getElementById(
+                    "target-select-group"
+                );
+                if (currentItem.targets && currentItem.targets.length > 1) {
+                    targetGroup.classList.remove("hidden");
+                    targetSelect.innerHTML =
+                        currentItem.targets
+                            .map((t) => `<option value="${t}">${t}</option>`)
+                            .join("") + '<option value="Shared">共用</option>';
+                } else {
+                    targetGroup.classList.add("hidden");
+                }
+
+                uploadMode = "item";
+                resetUpload();
+                showPage("upload");
+            }
+
+            // 總覽照片選擇
+            function onOverviewFileSelected(e) {
+                uploadMode = "overview";
+                currentItem = {
+                    id: document.getElementById("overview-target").value,
+                    name:
+                        document.getElementById("overview-target").value +
+                        " 照片",
+                    uid: "overview",
+                    targets: [document.getElementById("overview-target").value],
+                };
+
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        document.getElementById("image-to-crop").src =
+                            evt.target.result;
+                        document.getElementById("upload-item-name").innerText =
+                            currentItem.name;
+                        document.getElementById("upload-item-id").innerText =
+                            document.getElementById("overview-angle").value;
+                        document
+                            .getElementById("target-select-group")
+                            .classList.add("hidden");
+                        showPage("upload");
+                        startCropMode();
+                    };
+                    reader.readAsDataURL(file);
+                }
+                e.target.value = "";
+            }
+
+            // 測項上傳選擇
+            function onUploadFileSelected(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        document.getElementById("image-to-crop").src =
+                            evt.target.result;
+                        startCropMode();
+                    };
+                    reader.readAsDataURL(file);
+                }
+                e.target.value = "";
+            }
+
+            // 裁剪模式
+            function startCropMode() {
+                document.getElementById("upload-step0").classList.add("hidden");
+                document
+                    .getElementById("upload-step1")
+                    .classList.remove("hidden");
+                document.getElementById("upload-step2").classList.add("hidden");
+
+                if (cropper) cropper.destroy();
+                setTimeout(() => {
+                    cropper = new Cropper(
+                        document.getElementById("image-to-crop"),
+                        {
+                            viewMode: 1,
+                            dragMode: "move",
+                            autoCropArea: 0.9,
+                            restore: false,
+                            guides: true,
+                            center: true,
+                            highlight: false,
+                            cropBoxMovable: true,
+                            cropBoxResizable: true,
+                        }
+                    );
+                }, 100);
+            }
+
+            // 完成裁剪
+            function finishCrop() {
+                if (!cropper) return;
+                const croppedCanvas = cropper.getCroppedCanvas({
+                    maxWidth: 4096,
+                    maxHeight: 4096,
+                    imageSmoothingQuality: "high",
+                });
+                if (!croppedCanvas) {
+                    alert("裁切失敗");
+                    return;
+                }
+                originalImageWidth = croppedCanvas.width;
+                startDrawMode(
+                    croppedCanvas.toDataURL("image/jpeg", 0.95),
+                    croppedCanvas.width,
+                    croppedCanvas.height
+                );
+            }
+
+            // 標記模式
+            let croppedImageData = null; // 儲存裁切後的圖片
+
+            function startDrawMode(imageURL, w, h) {
+                croppedImageData = imageURL; // 保存圖片數據
+
+                document.getElementById("upload-step1").classList.add("hidden");
+                document
+                    .getElementById("upload-step2")
+                    .classList.remove("hidden");
+
+                // 等待一下確保 DOM 更新
+                setTimeout(() => {
+                    const container =
+                        document.querySelector("#page-upload .card");
+                    const containerWidth = container.clientWidth - 44;
+                    const scaleFactor = containerWidth / w;
+                    const finalWidth = containerWidth;
+                    const finalHeight = h * scaleFactor;
+
+                    if (fabricCanvas) {
+                        fabricCanvas.dispose();
+                        fabricCanvas = null;
+                    }
+
+                    const canvasEl = document.getElementById("fabric-canvas");
+
+                    // 先建立 canvas
+                    fabricCanvas = new fabric.Canvas("fabric-canvas", {
+                        width: finalWidth,
+                        height: finalHeight,
+                        selection: false,
+                    });
+
+                    // 使用 Image 物件載入
+                    const imgObj = new Image();
+                    imgObj.onload = function () {
+                        const fabricImg = new fabric.Image(imgObj, {
+                            originX: "left",
+                            originY: "top",
+                            scaleX: scaleFactor,
+                            scaleY: scaleFactor,
+                            selectable: false,
+                        });
+                        fabricCanvas.setBackgroundImage(fabricImg, () => {
+                            fabricCanvas.renderAll();
+                        });
+                    };
+                    imgObj.src = imageURL;
+
+                    fabricCanvas.on("selection:created", syncControls);
+                    fabricCanvas.on("selection:updated", syncControls);
+                }, 50);
+            }
+
+            // 框線控制
+            const colorInput = document.getElementById("line-color");
+            const widthInput = document.getElementById("line-width");
+            const widthVal = document.getElementById("width-val");
+
+            widthInput.addEventListener("input", function () {
+                widthVal.innerText = this.value;
+                updateActiveObject();
+            });
+            colorInput.addEventListener("input", updateActiveObject);
+
+            function updateActiveObject() {
+                if (!fabricCanvas) return;
+                const obj = fabricCanvas.getActiveObject();
+                if (obj) {
+                    obj.set({
+                        stroke: colorInput.value,
+                        strokeWidth: parseInt(widthInput.value, 10),
+                    });
+                    fabricCanvas.requestRenderAll();
+                }
+            }
+
+            function syncControls(e) {
+                const obj = e.selected[0];
+                if (obj) {
+                    colorInput.value = obj.stroke || "#ff0000";
+                    widthInput.value = obj.strokeWidth || 5;
+                    widthVal.innerText = obj.strokeWidth || 5;
+                }
+            }
+
+            function addRect() {
+                if (!fabricCanvas) return;
+                const rect = new fabric.Rect({
+                    left: fabricCanvas.width / 4,
+                    top: fabricCanvas.height / 4,
+                    width: fabricCanvas.width / 3,
+                    height: fabricCanvas.height / 3,
+                    fill: "transparent",
+                    stroke: colorInput.value,
+                    strokeWidth: parseInt(widthInput.value, 10),
+                    cornerColor: "blue",
+                    cornerSize: 20,
+                    transparentCorners: false,
+                    strokeUniform: true,
+                });
+                fabricCanvas.add(rect);
+                fabricCanvas.setActiveObject(rect);
+            }
+
+            function removeActiveObject() {
+                const obj = fabricCanvas.getActiveObject();
+                if (obj) fabricCanvas.remove(obj);
+            }
+
+            function backToCrop() {
+                document.getElementById("upload-step2").classList.add("hidden");
+                document
+                    .getElementById("upload-step1")
+                    .classList.remove("hidden");
+            }
+
+            function resetUpload() {
+                document
+                    .getElementById("upload-step0")
+                    .classList.remove("hidden");
+                document.getElementById("upload-step1").classList.add("hidden");
+                document.getElementById("upload-step2").classList.add("hidden");
+                document.getElementById("upload-title").value = "";
+                document.getElementById("status").innerText = "";
+                document.getElementById("btn-upload").disabled = false;
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+            }
+
+            // 上傳
+            async function doUpload() {
+                if (!fabricCanvas) return;
+                fabricCanvas.discardActiveObject();
+                fabricCanvas.renderAll();
+
+                const multiplier = originalImageWidth / fabricCanvas.getWidth();
+                const dataURL = fabricCanvas.toDataURL({
+                    format: "jpeg",
+                    quality: 1.0,
+                    multiplier: multiplier,
+                });
+
+                document.getElementById("status").innerText = "上傳中...";
+                document.getElementById("btn-upload").disabled = true;
+
+                const blob = dataURLtoBlob(dataURL);
+                const formData = new FormData();
+                formData.append("photo", blob, "upload.jpg");
+                formData.append(
+                    "title",
+                    document.getElementById("upload-title").value || ""
+                );
+
+                if (uploadMode === "overview") {
+                    formData.append("mode", "overview");
+                    const targetVal =
+                        document.getElementById("overview-target").value;
+                    const angleVal =
+                        document.getElementById("overview-angle").value;
+                    // 自動產生標題：例如 "UAV 正面"
+                    const angleNames = {
+                        front: "正面",
+                        back: "背面",
+                        side1: "側面1",
+                        side2: "側面2",
+                        top: "上方",
+                        bottom: "下方",
+                    };
+                    const autoTitle =
+                        targetVal + " " + (angleNames[angleVal] || angleVal);
+                    formData.set("title", autoTitle);
+                    formData.append("target", targetVal);
+                    formData.append("angle", angleVal);
+                } else {
+                    formData.append("mode", "item");
+                    formData.append("item_uid", currentItem.uid);
+                    formData.append("item_id", currentItem.id);
+                    formData.append("item_name", currentItem.name);
+                    formData.append(
+                        "target",
+                        document.getElementById("upload-target").value
+                    );
+                }
+
+                try {
+                    const res = await fetch("/api/upload", {
+                        method: "POST",
+                        body: formData,
+                    });
+                    const data = await res.json();
+                    if (data.status === "success") {
+                        document.getElementById("status").innerText =
+                            "✅ 上傳成功";
+                        document.getElementById("status").style.color = "green";
+                        setTimeout(() => {
+                            alert("上傳成功！");
+                            resetUpload();
+                            if (uploadMode === "overview") {
+                                showPage("overview");
+                            }
+                        }, 500);
+                    } else {
+                        alert("失敗: " + data.message);
+                        document.getElementById("status").innerText = "";
+                        document.getElementById("btn-upload").disabled = false;
+                    }
+                } catch (e) {
+                    alert("網路錯誤");
+                    document.getElementById("status").innerText = "";
+                    document.getElementById("btn-upload").disabled = false;
+                }
+            }
+
+            function dataURLtoBlob(dataurl) {
+                const arr = dataurl.split(",");
+                const mime = arr[0].match(/:(.*?);/)[1];
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) u8arr[n] = bstr.charCodeAt(n);
+                return new Blob([u8arr], { type: mime });
+            }
+
+            // 啟動
+            init();
+        </script>
+    </body>
+</html>

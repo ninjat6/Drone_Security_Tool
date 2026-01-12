@@ -41,7 +41,7 @@ class ProjectManager(QObject):
     """專案管理器 - 負責專案的建立、載入、儲存和資料管理"""
 
     data_changed = Signal()
-    photo_received = Signal(str, str, str)
+    photo_received = Signal(str, str, str, str)  # item_uid, target, path, title
 
     def __init__(self):
         super().__init__()
@@ -192,16 +192,36 @@ class ProjectManager(QObject):
         #     self.data_changed.emit()
     """
 
-    def handle_mobile_photo(self, target_id, category, full_path):
-        if self.current_project_path:
-            rel_path = os.path.relpath(full_path, self.current_project_path)
-            rel_path = rel_path.replace("\\", "/")
-        else:
-            rel_path = full_path
-        if target_id in TARGETS:
-            info_key = f"{target_id}_{category}_path"
+    def handle_mobile_photo(self, mode, item_uid, target, full_path, title):
+        """
+        處理手機上傳的照片
+        
+        Args:
+            mode: 'overview' 或 'item'
+            item_uid: 測項 UID (item 模式) 或 target 名稱 (overview 模式)
+            target: 目標 (UAV/GCS/Shared) 或 angle (overview 模式)
+            full_path: 完整儲存路徑
+            title: 使用者輸入的標題
+        """
+        if not self.current_project_path:
+            return
+        
+        rel_path = os.path.relpath(full_path, self.current_project_path)
+        rel_path = rel_path.replace("\\", "/")
+        
+        if mode == "overview":
+            # 總覽照片：更新 info 中的 {target}_{angle}_path
+            # 此處 item_uid = target (UAV/GCS), target = angle (front/back/...)
+            target_name = item_uid  # UAV 或 GCS
+            angle = target  # front, back, side1, side2, top, bottom
+            info_key = f"{target_name}_{angle}_path"
             self.update_info({info_key: rel_path})
-        self.photo_received.emit(target_id, category, rel_path)
+            # 發送 signal 給 overview 頁面
+            self.photo_received.emit(target_name, angle, rel_path, title)
+        else:
+            # 測項佐證：暫不自動儲存，由 GUI 的儲存按鈕處理
+            # 這裡只發送 signal 通知 GUI
+            self.photo_received.emit(item_uid, target, rel_path, title)
 
     def generate_mobile_link(
         self, target_id, target_name, is_report=False
@@ -816,6 +836,14 @@ class ProjectManager(QObject):
 
         self.save_all()
         self.data_changed.emit()
+
+    def get_project_name(self) -> str:
+        """取得專案名稱"""
+        return self.project_data.get("info", {}).get("project_name", "未命名專案")
+
+    def get_current_config(self) -> dict:
+        """取得當前專案使用的規範設定"""
+        return self.current_config or {}
 
     def get_test_meta(self, test_uid):
         return self.project_data.get("tests", {}).get(test_uid, {}).get("__meta__", {})

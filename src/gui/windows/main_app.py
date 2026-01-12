@@ -44,6 +44,7 @@ from constants import (
 from core.project_manager import ProjectManager
 from dialogs.version_dialog import VersionSelectionDialog
 from dialogs.migration_dialog import MigrationReportDialog
+from dialogs.mobile_helper import MobileHelperDialog
 from pages.overview import OverviewPage
 from pages.test_page import UniversalTestPage
 from pages.quick_selector import QuickTestSelector
@@ -198,6 +199,9 @@ class MainApp(BorderedMainWindow):
         self.a_edit = f_menu.addAction("編輯專案資訊", self.on_edit)
 
         t_menu = mb.addMenu("工具")
+        self.a_mobile = t_menu.addAction("📱 手機助手", self.on_mobile_helper)
+        self.a_mobile.setEnabled(False)
+        t_menu.addSeparator()
         t_menu.addAction("🔧 各別檢測模式 (Ad-Hoc)", self.on_adhoc)
         t_menu.addSeparator()
         self.a_save_as_ver = t_menu.addAction(
@@ -482,6 +486,15 @@ class MainApp(BorderedMainWindow):
             else:
                 QMessageBox.warning(self, "Fail", msg)
 
+    def on_mobile_helper(self):
+        """開啟手機助手浮動視窗"""
+        if not self.pm.current_project_path:
+            QMessageBox.warning(self, "警告", "請先開啟專案")
+            return
+        
+        dialog = MobileHelperDialog(self, self.pm, self.config)
+        dialog.show()
+
     def project_ready(self):
         self._set_ui_locked(False)
         self.refresh_ui()
@@ -508,6 +521,7 @@ class MainApp(BorderedMainWindow):
 
         self.a_edit.setEnabled(has_proj)
         self.a_merge.setEnabled(has_proj)
+        self.a_mobile.setEnabled(has_proj)
 
         if has_proj and p_type == PROJECT_TYPE_FULL:
             self.a_save_as_ver.setEnabled(True)
@@ -602,13 +616,13 @@ class MainApp(BorderedMainWindow):
         
         win.show()
 
-    @Slot(str, str, str)
-    def on_photo_received(self, target_id, category, path):
+    @Slot(str, str, str, str)
+    def on_photo_received(self, item_uid, target, path, title):
         filename = os.path.basename(path)
-        msg = f"✅ 已收到照片：[{target_id} - {category}] {filename}"
+        msg = f"✅ 已收到照片：[{item_uid} - {target}] {title or filename}"
         self.statusBar().showMessage(msg, 5000)
 
-        if target_id in TARGETS:
+        if item_uid in TARGETS:
             self.refresh_ui()
 
     def closeEvent(self, event):

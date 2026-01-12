@@ -238,7 +238,7 @@ class OverviewPage(QWidget):
         gallery = GalleryWindow(self, self.pm, target)
         gallery.exec()
 
-    @Slot(str, str, str)
-    def on_photo_received(self, target_id, category, path):
+    @Slot(str, str, str, str)
+    def on_photo_received(self, target_id, category, path, title):
         if target_id in TARGETS:
             self.refresh_data()
