@@ -392,7 +392,7 @@ class BaseTestTool(QObject):
     save_completed = Signal(bool, str)
 
     def __init__(
-        self, config, result_data, target, project_manager=None, save_callback=None
+        self, config, result_data, target, project_manager=None, save_callback=None, is_shared=False
     ):
         super().__init__()
         self.config = config
@@ -404,6 +404,8 @@ class BaseTestTool(QObject):
         self.item_uid = config.get("uid", config.get("id"))
         self.item_id = config.get("id", "")      # 檢測項目 ID (6.2.1)
         self.item_name = config.get("name", "")  # 檢測項目名稱 (身分鑑別)
+        self.targets = config.get("targets", [])  # 目標列表 ["UAV", "GCS"]
+        self.is_shared = is_shared               # 是否為共用模式
 
         # 內容對照 (用於產生失敗原因)
         self.item_content_map = {}
@@ -622,13 +624,16 @@ class BaseTestTool(QObject):
                 # 使用原檔名 (去除副檔名) 作為標題
                 title = os.path.splitext(os.path.basename(f_path))[0]
                 
-                # 使用新的 import_attachment 方法
+                # 使用新的 import_attachment 方法（支援多目標）
                 rel_path = self.pm.import_attachment(
                     f_path,
                     self.item_id,
                     self.item_name,
                     file_type=ftype,
                     title=title,
+                    targets=self.targets,
+                    target=self.target,
+                    is_shared=self.is_shared,
                 )
                 if rel_path:
                     full_path = os.path.join(self.pm.current_project_path, rel_path)

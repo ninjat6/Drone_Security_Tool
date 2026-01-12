@@ -3,7 +3,6 @@
 包含 CommandTestToolStrings, CommandTestToolView, CommandWorker, CommandTestTool
 """
 
-from jinja2.utils import pass_eval_context
 import os
 import sys
 import signal
@@ -365,9 +364,9 @@ class CommandTestTool(BaseTestTool):
     log_saved = Signal(str)  # log_path
 
     def __init__(
-        self, config, result_data, target, project_manager=None, save_callback=None
+        self, config, result_data, target, project_manager=None, save_callback=None, is_shared=False
     ):
-        super().__init__(config, result_data, target, project_manager, save_callback)
+        super().__init__(config, result_data, target, project_manager, save_callback, is_shared)
 
         # 指令執行狀態
         self.last_command = ""
@@ -448,8 +447,11 @@ class CommandTestTool(BaseTestTool):
             QMessageBox.warning(self.view, "錯誤", "專案路徑未設定，無法儲存截圖")
             return
 
-        # 取得檢測項目資料夾
-        item_folder = self.pm.get_item_folder(self.item_id, self.item_name)
+        # 取得檢測項目資料夾（支援多目標）
+        item_folder = self.pm.get_item_folder(
+            self.item_id, self.item_name,
+            targets=self.targets, target=self.target, is_shared=self.is_shared
+        )
         report_dir = os.path.join(self.project_path, item_folder)
         os.makedirs(report_dir, exist_ok=True)
 
@@ -500,6 +502,12 @@ class CommandTestTool(BaseTestTool):
         filename = f"{timestamp}_img_{safe_title}.png"
         filepath = os.path.join(report_dir, filename)
 
+        # 如果檔案已存在，加上秒數時間戳避免覆蓋
+        if os.path.exists(filepath):
+            ts_sec = datetime.now().strftime("%H%M%S")
+            filename = f"{timestamp}_img_{safe_title}_{ts_sec}.png"
+            filepath = os.path.join(report_dir, filename)
+
         # 儲存截圖
         pixmap.save(filepath, "PNG")
 
@@ -521,8 +529,11 @@ class CommandTestTool(BaseTestTool):
             QMessageBox.warning(self.view, "錯誤", "沒有執行結果可儲存")
             return
 
-        # 取得檢測項目資料夾
-        item_folder = self.pm.get_item_folder(self.item_id, self.item_name)
+        # 取得檢測項目資料夾（支援多目標）
+        item_folder = self.pm.get_item_folder(
+            self.item_id, self.item_name,
+            targets=self.targets, target=self.target, is_shared=self.is_shared
+        )
         report_dir = os.path.join(self.project_path, item_folder)
         os.makedirs(report_dir, exist_ok=True)
 
@@ -536,6 +547,12 @@ class CommandTestTool(BaseTestTool):
         timestamp = datetime.now().strftime(DATE_FMT_PY_FILENAME_SHORT)
         filename = f"{timestamp}_log_{safe_title}.txt"
         filepath = os.path.join(report_dir, filename)
+
+        # 如果檔案已存在，加上秒數時間戳避免覆蓋
+        if os.path.exists(filepath):
+            ts_sec = datetime.now().strftime("%H%M%S")
+            filename = f"{timestamp}_log_{safe_title}_{ts_sec}.txt"
+            filepath = os.path.join(report_dir, filename)
 
         # 儲存 log
         with open(filepath, "w", encoding="utf-8") as f:

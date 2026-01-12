@@ -101,6 +101,7 @@ class UniversalTestPage(QWidget):
             target,
             project_manager=self.pm,
             save_callback=save_cb,
+            is_shared=is_shared,
         )
         self.tools.append(tool)
         return tool.get_widget()
@@ -117,6 +118,12 @@ class UniversalTestPage(QWidget):
 
     def save_share(self, data):
         uid = self.config.get("uid", self.config.get("id"))
+        
+        # 寫入 Shared 區塊
+        self.pm.update_test_result(uid, "Shared", data, is_shared=True)
+        
+        # 更新每個 target 的 meta (標記為共用模式)
         for t in self.targets:
-            self.pm.update_test_result(uid, t, data, is_shared=True)
+            self.pm.update_test_meta(uid, t, {"is_shared": True})
+        
         QMessageBox.information(self, "成功", "共用儲存完成")

@@ -30,7 +30,8 @@ class ToolFactory:
         target,
         project_manager=None,
         save_callback=None,
+        is_shared=False,
     ) -> BaseTestTool:
         """建立 Tool 實例"""
         tool_class = ToolFactory._registry.get(class_name, BaseTestTool)
-        return tool_class(config, result_data, target, project_manager, save_callback)
+        return tool_class(config, result_data, target, project_manager, save_callback, is_shared)
