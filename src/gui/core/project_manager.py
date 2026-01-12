@@ -55,40 +55,42 @@ class ProjectManager(QObject):
     def set_standard_config(self, config):
         self.std_config = config
 
-    # def save_snapshot(self, note="backup"):
-    #     if not self.current_project_path:
-    #         return False
-    #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    #     std_name = self.project_data.get("standard_name", "unknown").replace(" ", "_")
-    #     filename = f"snapshot_{std_name}_{timestamp}_{note}.json"
-    #     src = os.path.join(self.current_project_path, self.settings_filename)
-    #     dst = os.path.join(self.current_project_path, filename)
-    #     try:
-    #         shutil.copy2(src, dst)
-    #         return True, filename
-    #     except Exception as e:
-    #         return False, str(e)
+    """
+        # def save_snapshot(self, note="backup"):
+        #     if not self.current_project_path:
+        #         return False
+        #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        #     std_name = self.project_data.get("standard_name", "unknown").replace(" ", "_")
+        #     filename = f"snapshot_{std_name}_{timestamp}_{note}.json"
+        #     src = os.path.join(self.current_project_path, self.settings_filename)
+        #     dst = os.path.join(self.current_project_path, filename)
+        #     try:
+        #         shutil.copy2(src, dst)
+        #         return True, filename
+        #     except Exception as e:
+        #         return False, str(e)
 
-    # def list_snapshots(self) -> List[str]:
-    #     if not self.current_project_path:
-    #         return []
-    #     snaps = []
-    #     for f in os.listdir(self.current_project_path):
-    #         if f.startswith("snapshot_") and f.endswith(".json"):
-    #             snaps.append(f)
-    #     snaps.sort(reverse=True)
-    #     return snaps
+        # def list_snapshots(self) -> List[str]:
+        #     if not self.current_project_path:
+        #         return []
+        #     snaps = []
+        #     for f in os.listdir(self.current_project_path):
+        #         if f.startswith("snapshot_") and f.endswith(".json"):
+        #             snaps.append(f)
+        #     snaps.sort(reverse=True)
+        #     return snaps
 
-    # def restore_snapshot(self, snapshot_filename):
-    #     if not self.current_project_path:
-    #         return False
-    #     src = os.path.join(self.current_project_path, snapshot_filename)
-    #     dst = os.path.join(self.current_project_path, self.settings_filename)
-    #     try:
-    #         shutil.copy2(src, dst)
-    #         return self.load_project(self.current_project_path)
-    #     except Exception as e:
-    #         return False, str(e)
+        # def restore_snapshot(self, snapshot_filename):
+        #     if not self.current_project_path:
+        #         return False
+        #     src = os.path.join(self.current_project_path, snapshot_filename)
+        #     dst = os.path.join(self.current_project_path, self.settings_filename)
+        #     try:
+        #         shutil.copy2(src, dst)
+        #         return self.load_project(self.current_project_path)
+        #     except Exception as e:
+        #         return False, str(e)
+    """
 
     def calculate_migration_impact(self, new_config) -> List[Dict]:
         report = []
@@ -139,54 +141,56 @@ class ProjectManager(QObject):
 
         return report
 
-    # def apply_version_switch(self, new_config, migration_report):
-    #     self.save_snapshot("before_switch")
-    #     old_tests_data = self.project_data.get("tests", {})
-    #     new_tests_data = {}
-    #     new_item_map = {}
-    #     for sec in new_config["test_standards"]:
-    #         for item in sec["items"]:
-    #             new_item_map[item["uid"]] = item
+    """
+        # def apply_version_switch(self, new_config, migration_report):
+        #     self.save_snapshot("before_switch")
+        #     old_tests_data = self.project_data.get("tests", {})
+        #     new_tests_data = {}
+        #     new_item_map = {}
+        #     for sec in new_config["test_standards"]:
+        #         for item in sec["items"]:
+        #             new_item_map[item["uid"]] = item
 
-    #     for row in migration_report:
-    #         uid = row["uid"]
-    #         status = row["status"]
-    #         if status == "REMOVE":
-    #             continue
-    #         new_item_def = new_item_map.get(uid)
-    #         new_ver = (
-    #             new_item_def.get("criteria_version") if new_item_def else "unknown"
-    #         )
+        #     for row in migration_report:
+        #         uid = row["uid"]
+        #         status = row["status"]
+        #         if status == "REMOVE":
+        #             continue
+        #         new_item_def = new_item_map.get(uid)
+        #         new_ver = (
+        #             new_item_def.get("criteria_version") if new_item_def else "unknown"
+        #         )
 
-    #         if status == "NEW":
-    #             new_tests_data[uid] = {}  # 初始化
-    #         elif status == "MATCH":
-    #             new_tests_data[uid] = old_tests_data[uid].copy()
-    #         elif status == "RESET":
-    #             if uid in old_tests_data:
-    #                 old_entry = old_tests_data[uid]
-    #                 new_entry = {}
-    #                 for target in TARGETS:
-    #                     if target in old_entry:
-    #                         new_entry[target] = {}
-    #                         new_entry[target]["attachments"] = old_entry[target].get(
-    #                             "attachments", []
-    #                         )
-    #                         new_entry[target]["result"] = STATUS_UNCHECKED
-    #                         new_entry[target]["criteria_version_snapshot"] = new_ver
+        #         if status == "NEW":
+        #             new_tests_data[uid] = {}  # 初始化
+        #         elif status == "MATCH":
+        #             new_tests_data[uid] = old_tests_data[uid].copy()
+        #         elif status == "RESET":
+        #             if uid in old_tests_data:
+        #                 old_entry = old_tests_data[uid]
+        #                 new_entry = {}
+        #                 for target in TARGETS:
+        #                     if target in old_entry:
+        #                         new_entry[target] = {}
+        #                         new_entry[target]["attachments"] = old_entry[target].get(
+        #                             "attachments", []
+        #                         )
+        #                         new_entry[target]["result"] = STATUS_UNCHECKED
+        #                         new_entry[target]["criteria_version_snapshot"] = new_ver
 
-    #                 # 複製 Meta
-    #                 if "__meta__" in old_entry:
-    #                     new_entry["__meta__"] = old_entry["__meta__"].copy()
+        #                 # 複製 Meta
+        #                 if "__meta__" in old_entry:
+        #                     new_entry["__meta__"] = old_entry["__meta__"].copy()
 
-    #                 new_tests_data[uid] = new_entry
+        #                 new_tests_data[uid] = new_entry
 
-    #     self.project_data["standard_name"] = new_config.get("standard_name")
-    #     self.project_data["standard_version"] = new_config.get("standard_version")
-    #     self.project_data["tests"] = new_tests_data
-    #     self.set_standard_config(new_config)
-    #     self.save_all()
-    #     self.data_changed.emit()
+        #     self.project_data["standard_name"] = new_config.get("standard_name")
+        #     self.project_data["standard_version"] = new_config.get("standard_version")
+        #     self.project_data["tests"] = new_tests_data
+        #     self.set_standard_config(new_config)
+        #     self.save_all()
+        #     self.data_changed.emit()
+    """
 
     def handle_mobile_photo(self, target_id, category, full_path):
         if self.current_project_path:
@@ -473,31 +477,48 @@ class ProjectManager(QObject):
         except Exception as e:
             return False, f"讀取失敗: {e}"
 
-    def import_file(self, src_path: str, sub_folder: str = DIR_IMAGES) -> Optional[str]:
-        if not self.current_project_path:
-            return None
-        try:
-            filename = os.path.basename(src_path)
-            ts = datetime.now().strftime(DATE_FMT_PY_FILENAME)
-            new_filename = f"{ts}_{filename}"
-            target_dir = os.path.join(self.current_project_path, sub_folder)
-            if not os.path.exists(target_dir):
-                os.makedirs(target_dir)
-            dest_path = os.path.join(target_dir, new_filename)
-            shutil.copy2(src_path, dest_path)
-            return f"{sub_folder}/{new_filename}"
-        except Exception as e:
-            print(f"複製檔案失敗: {e}")
-            return None
 
-    def get_item_folder(self, item_id: str, item_name: str) -> str:
+    def get_item_folder(
+        self,
+        item_id: str,
+        item_name: str,
+        targets: list = None,
+        target: str = None,
+        is_shared: bool = False,
+    ) -> str:
         """
         取得檢測項目的佐證資料夾路徑
-        格式：reports/{item_id}_{item_name}/
+        
+        Args:
+            item_id: 檢測項目 ID (如 6.2.1)
+            item_name: 檢測項目名稱 (如 身分鑑別)
+            targets: 測項的目標列表 (如 ["UAV", "GCS"])
+            target: 目前的目標 (如 "UAV", "GCS", "Shared")
+            is_shared: 是否為共用模式
+        
+        Returns:
+            相對路徑：
+            - 單一目標: reports/{item_id}_{item_name}/
+            - 多目標分開: reports/{item_id}_{item_name}/{target}/
+            - 多目標共用: reports/{item_id}_{item_name}/Shared/
         """
         safe_name = sanitize_filename(item_name)
-        folder_name = f"{item_id}_{safe_name}"
-        return os.path.join(DIR_REPORTS, folder_name)
+        base_folder = f"{item_id}_{safe_name}"
+        
+        # 判斷是否為多目標
+        is_multi_target = targets and len(targets) > 1
+        
+        if is_multi_target:
+            if is_shared or target == "Shared":
+                return os.path.join(DIR_REPORTS, base_folder, "Shared")
+            elif target:
+                return os.path.join(DIR_REPORTS, base_folder, target)
+            else:
+                # 預設使用第一個 target
+                return os.path.join(DIR_REPORTS, base_folder, targets[0])
+        else:
+            # 單一目標，直接放根目錄
+            return os.path.join(DIR_REPORTS, base_folder)
 
     def import_attachment(
         self,
@@ -506,6 +527,9 @@ class ProjectManager(QObject):
         item_name: str,
         file_type: str = "img",
         title: str = "",
+        targets: list = None,
+        target: str = None,
+        is_shared: bool = False,
     ) -> Optional[str]:
         """
         匯入佐證資料到檢測項目資料夾
@@ -516,6 +540,9 @@ class ProjectManager(QObject):
             item_name: 檢測項目名稱 (如 身分鑑別)
             file_type: 檔案類型 (img, log, file)
             title: 檔案標題 (用於檔名)
+            targets: 測項的目標列表 (如 ["UAV", "GCS"])
+            target: 目前的目標 (如 "UAV", "GCS", "Shared")
+            is_shared: 是否為共用模式
         
         Returns:
             相對路徑或 None
@@ -541,8 +568,10 @@ class ProjectManager(QObject):
             # 組合檔名
             new_filename = f"{ts}_{file_type}_{safe_title}{ext}"
             
-            # 取得目標資料夾
-            item_folder = self.get_item_folder(item_id, item_name)
+            # 取得目標資料夾（支援多目標）
+            item_folder = self.get_item_folder(
+                item_id, item_name, targets=targets, target=target, is_shared=is_shared
+            )
             target_dir = os.path.join(self.current_project_path, item_folder)
             
             if not os.path.exists(target_dir):
@@ -550,13 +579,12 @@ class ProjectManager(QObject):
             
             dest_path = os.path.join(target_dir, new_filename)
             
-            # 如果檔案已存在，加上序號
+            # 如果檔案已存在，加上秒數時間戳
             if os.path.exists(dest_path):
+                ts_sec = datetime.now().strftime("%H%M%S")
                 base, ext = os.path.splitext(new_filename)
-                counter = 1
-                while os.path.exists(dest_path):
-                    dest_path = os.path.join(target_dir, f"{base}_{counter}{ext}")
-                    counter += 1
+                new_filename = f"{base}_{ts_sec}{ext}"
+                dest_path = os.path.join(target_dir, new_filename)
             
             shutil.copy2(src_path, dest_path)
             
@@ -665,13 +693,11 @@ class ProjectManager(QObject):
             if old_path == new_path:
                 return old_path
             
-            # 如果新檔名已存在，加上序號
+            # 如果新檔名已存在，加上秒數時間戳
             if os.path.exists(new_path):
-                counter = 1
-                while os.path.exists(new_path):
-                    new_filename = f"{timestamp}_{file_type}_{safe_title}_{counter}{ext}"
-                    new_path = os.path.join(file_dir, new_filename)
-                    counter += 1
+                ts_sec = datetime.now().strftime("%H%M%S")
+                new_filename = f"{timestamp}_{file_type}_{safe_title}_{ts_sec}{ext}"
+                new_path = os.path.join(file_dir, new_filename)
             
             os.rename(old_path, new_path)
             return new_path
@@ -679,6 +705,7 @@ class ProjectManager(QObject):
         except Exception as e:
             print(f"重命名附件失敗: {e}")
             return None
+
 
     def merge_external_project(self, source_folder: str) -> Tuple[bool, str]:
         if not self.current_project_path:
@@ -793,6 +820,26 @@ class ProjectManager(QObject):
     def get_test_meta(self, test_uid):
         return self.project_data.get("tests", {}).get(test_uid, {}).get("__meta__", {})
 
+    def update_test_meta(self, test_uid, target, meta_update: dict):
+        """
+        更新測項的 meta 資料
+        
+        Args:
+            test_uid: 測項 UID
+            target: 目標 (UAV, GCS, Shared)
+            meta_update: 要更新的 meta 欄位
+        """
+        if "tests" not in self.project_data:
+            self.project_data["tests"] = {}
+        if test_uid not in self.project_data["tests"]:
+            self.project_data["tests"][test_uid] = {}
+        if "__meta__" not in self.project_data["tests"][test_uid]:
+            self.project_data["tests"][test_uid]["__meta__"] = {}
+        
+        self.project_data["tests"][test_uid]["__meta__"].update(meta_update)
+        self.save_all()
+        self.data_changed.emit()
+
     def save_all(self):
         if not self.current_project_path:
             return False, "No Path"
@@ -819,22 +866,50 @@ class ProjectManager(QObject):
         uid = item_config.get("uid", item_config.get("id"))
         targets = item_config.get("targets", [TARGET_GCS])
         item_data = self.project_data.get("tests", {}).get(uid, {})
+        
+        # 檢查是否為共用模式
+        meta = item_data.get("__meta__", {})
+        is_shared = meta.get("is_shared", False)
+        
         status_map = {}
-        for t in targets:
-            if t not in item_data:
-                status_map[t] = STATUS_NOT_TESTED
+        
+        if is_shared and len(targets) > 1:
+            # 共用模式：使用 Shared 的結果顯示各 target
+            shared_data = item_data.get("Shared", {})
+            res = shared_data.get("result", STATUS_UNCHECKED)
+            
+            # 判斷 Shared 的狀態
+            if STATUS_UNCHECKED in res:
+                shared_status = STATUS_NOT_TESTED
+            elif STATUS_PASS in res:
+                shared_status = "Pass"
+            elif STATUS_FAIL in res:
+                shared_status = "Fail"
+            elif STATUS_NA in res:
+                shared_status = "N/A"
             else:
-                res = item_data[t].get("result", STATUS_UNCHECKED)
-                if STATUS_UNCHECKED in res:
+                shared_status = STATUS_UNKNOWN
+            
+            # 將同一狀態套用到所有 target
+            for t in targets:
+                status_map[t] = shared_status
+        else:
+            # 分開模式：顯示各 target 的狀態
+            for t in targets:
+                if t not in item_data:
                     status_map[t] = STATUS_NOT_TESTED
-                elif STATUS_PASS in res:
-                    status_map[t] = "Pass"
-                elif STATUS_FAIL in res:
-                    status_map[t] = "Fail"
-                elif STATUS_NA in res:
-                    status_map[t] = "N/A"
                 else:
-                    status_map[t] = STATUS_UNKNOWN
+                    res = item_data[t].get("result", STATUS_UNCHECKED)
+                    if STATUS_UNCHECKED in res:
+                        status_map[t] = STATUS_NOT_TESTED
+                    elif STATUS_PASS in res:
+                        status_map[t] = "Pass"
+                    elif STATUS_FAIL in res:
+                        status_map[t] = "Fail"
+                    elif STATUS_NA in res:
+                        status_map[t] = "N/A"
+                    else:
+                        status_map[t] = STATUS_UNKNOWN
         return status_map
 
     def is_test_fully_completed(self, item_config) -> bool:
