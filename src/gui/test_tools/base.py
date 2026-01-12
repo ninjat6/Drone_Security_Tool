@@ -428,6 +428,15 @@ class BaseTestTool(QObject):
         if self.pm:
             self.pm.photo_received.connect(self._on_photo_received)
 
+    def cleanup(self):
+        """清理資源，斷開信號連接"""
+        if self.pm:
+            try:
+                self.pm.photo_received.disconnect(self._on_photo_received)
+            except (RuntimeError, TypeError):
+                # 可能已經斷開或物件已銷毀
+                pass
+
         # 載入已存資料
         if result_data:
             self._load_data(result_data)

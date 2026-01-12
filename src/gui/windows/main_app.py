@@ -61,6 +61,7 @@ class MainApp(BorderedMainWindow):
         self.pm = ProjectManager()
         self.test_ui_elements = {}
         self.test_windows = {}  # 追蹤已開啟的檢測視窗 {uid: window}
+        self.mobile_helper_win = None  # 追蹤手機助手視窗
         self.current_font_size = 10
 
         self.pm.photo_received.connect(self.on_photo_received)
@@ -247,6 +248,10 @@ class MainApp(BorderedMainWindow):
         c = ProjectFormController(self, selected_config)
         d = c.run()
         if d:
+            if self.mobile_helper_win:
+                self.mobile_helper_win.close()
+                self.mobile_helper_win = None
+            self.pm.stop_server()  # 停止舊伺服器
             self.config = selected_config
             self.rebuild_ui_from_config()
 
@@ -289,6 +294,10 @@ class MainApp(BorderedMainWindow):
 
                 ok, m = self.pm.load_project(folder_path)
                 if ok:
+                    if self.mobile_helper_win:
+                        self.mobile_helper_win.close()
+                        self.mobile_helper_win = None
+                    self.pm.stop_server()  # 停止舊伺服器
                     self.project_ready()
                 else:
                     QMessageBox.warning(self, "載入失敗", m)
@@ -311,6 +320,10 @@ class MainApp(BorderedMainWindow):
         d = QuickTestSelector(self, selected_config)
         s, p = d.run()
         if s and p:
+            if self.mobile_helper_win:
+                self.mobile_helper_win.close()
+                self.mobile_helper_win = None
+            self.pm.stop_server()
             self.config = selected_config
             self.rebuild_ui_from_config()
 
@@ -383,6 +396,10 @@ class MainApp(BorderedMainWindow):
                     ok_load, err_load = self.pm.load_project(new_project_path)
 
                     if ok_load:
+                        if self.mobile_helper_win:
+                            self.mobile_helper_win.close()
+                            self.mobile_helper_win = None
+                        self.pm.stop_server()
                         self.config = new_config
                         self.rebuild_ui_from_config()
                         self.project_ready()
@@ -492,8 +509,13 @@ class MainApp(BorderedMainWindow):
             QMessageBox.warning(self, "警告", "請先開啟專案")
             return
         
-        dialog = MobileHelperDialog(self, self.pm, self.config)
-        dialog.show()
+        if self.mobile_helper_win and self.mobile_helper_win.isVisible():
+            self.mobile_helper_win.raise_()
+            self.mobile_helper_win.activateWindow()
+            return
+
+        self.mobile_helper_win = MobileHelperDialog(self, self.pm, self.config)
+        self.mobile_helper_win.show()
 
     def project_ready(self):
         self._set_ui_locked(False)
@@ -627,6 +649,9 @@ class MainApp(BorderedMainWindow):
 
     def closeEvent(self, event):
         """當 MainApp 關閉時，關閉所有已開啟的檢測視窗"""
+        if self.mobile_helper_win:
+            self.mobile_helper_win.close()
+        self.pm.stop_server()  # 停止伺服器
         # 複製一份 keys，避免在迭代時修改字典
         for uid in list(self.test_windows.keys()):
             win = self.test_windows.get(uid)

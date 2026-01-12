@@ -31,8 +31,16 @@ class UniversalTestPage(QWidget):
         self.targets = config.get("targets", "ERROR")
         self.allow_share = config.get("allow_share", False)
         self.tools = []  # 防止 Tool 被 Garbage Collection 回收
+        self.destroyed.connect(self.cleanup_tools)  # 清理資源
         self._init_ui()
         self._load_state()
+
+    def cleanup_tools(self):
+        """清理所有工具資源"""
+        for tool in self.tools:
+            if hasattr(tool, 'cleanup'):
+                tool.cleanup()
+        self.tools.clear()
 
     def _init_ui(self):
         # self.resize(1200, 1200)

@@ -52,6 +52,65 @@ class ProjectManager(QObject):
         self.server = PhotoServer(port=8000)
         self.server.photo_received.connect(self.handle_mobile_photo)
 
+    def stop_server(self):
+        """停止手機上傳伺服器"""
+        if self.server and self.server.is_running():
+            self.server.stop()
+
+    def _sync_server_data(self):
+        """同步專案資料到伺服器"""
+        if not self.current_project_path or not self.project_data:
+            return
+
+        info = self.project_data.get("info", {})
+        project_name = info.get("project_name", "Unknown")
+
+        # 整理測項列表
+        items_for_server = []
+        
+        # 根據專案類型決定要顯示的測項
+        p_type = self.get_current_project_type()
+        
+        if p_type == PROJECT_TYPE_ADHOC:
+            # Ad-Hoc: 只顯示白名單內的項目
+            whitelist = info.get("target_items", [])
+            
+            # 從 std_config 找完整的項目資訊
+            for sec in self.std_config.get("test_standards", []):
+                for item in sec["items"]:
+                    if item["uid"] in whitelist:
+                        items_for_server.append({
+                            "uid": item["uid"],
+                            "id": item["id"],
+                            "name": item["name"],
+                            "targets": item["targets"]
+                        })
+        else:
+            # 一般專案: 顯示所有項目 (或根據 scope 篩選)
+            scope = info.get("test_scope", [])
+            has_scope = bool(scope) or "test_scope" in info
+            
+            for sec in self.std_config.get("test_standards", []):
+                # 如果有設定範圍且 section 不在範圍內，跳過 (除非 item 本身被特別加入? 目前邏輯是 section level)
+                if has_scope and str(sec["section_id"]) not in scope:
+                    continue
+                    
+                for item in sec["items"]:
+                    items_for_server.append({
+                        "uid": item["uid"],
+                        "id": item["id"],
+                        "name": item["name"],
+                        "targets": item["targets"]
+                    })
+
+        self.server.set_project(
+            self.current_project_path,
+            project_name,
+            items_for_server
+        )
+
+
+
     def set_standard_config(self, config):
         self.std_config = config
 
@@ -468,7 +527,9 @@ class ProjectManager(QObject):
             os.makedirs(os.path.join(path, DIR_IMAGES), exist_ok=True)
             os.makedirs(os.path.join(path, DIR_REPORTS), exist_ok=True)
             self.current_project_path = path
+            self.current_project_path = path
             self.save_all()
+            self._sync_server_data()
             return True, path
         except Exception as e:
             return False, str(e)
@@ -492,6 +553,8 @@ class ProjectManager(QObject):
             with open(json_path, "r", encoding="utf-8") as f:
                 self.project_data = json.load(f)
             self.current_project_path = folder_path
+            self.current_project_path = folder_path
+            self._sync_server_data()
             self.data_changed.emit()
             return True, "讀取成功"
         except Exception as e:
@@ -785,6 +848,7 @@ class ProjectManager(QObject):
                     merged_count += 1
 
             self.save_all()
+            self._sync_server_data()
             self.data_changed.emit()
             return True, f"成功合併 {merged_count} 筆測項資料"
 
@@ -796,6 +860,7 @@ class ProjectManager(QObject):
             return False
         self.project_data.setdefault("info", {}).update(new_info)
         self.save_all()
+        self._sync_server_data()
         self.data_changed.emit()
         return True
 
@@ -835,6 +900,7 @@ class ProjectManager(QObject):
                 print(f"Deleted data for: {uid}")
 
         self.save_all()
+        self._sync_server_data()
         self.data_changed.emit()
 
     def get_project_name(self) -> str:

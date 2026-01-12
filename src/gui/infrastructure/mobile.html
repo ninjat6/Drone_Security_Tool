@@ -73,8 +73,8 @@
                 color: #444;
             }
             .project-name {
-                font-size: 0.9rem;
-                color: #666;
+                font-size: 1.1rem;
+                color: #E3E3E3;
                 text-align: center;
                 margin-bottom: 20px;
             }
@@ -349,6 +349,35 @@
                 from { transform: translateX(0); opacity: 1; }
                 to { transform: translateX(100%); opacity: 1; }
             }
+
+            /* Pull to Refresh */
+            #refresh-loader {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 0;
+                color: rgba(255, 255, 255, 0.9);
+                font-weight: bold;
+                pointer-events: none;
+            }
+            #refresh-loader .icon {
+                font-size: 24px;
+                margin-right: 8px;
+                transition: transform 0.2s;
+                display: inline-block;
+            }
+            #refresh-loader .spinner {
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
         </style>
 
 
@@ -360,10 +389,17 @@
     </head>
     <body>
         <div class="container">
+    <body>
+        <div class="container">
+            <div id="refresh-loader">
+                <span class="icon" id="refresh-icon"></span>
+                <span class="text" id="refresh-text"></span>
+            </div>
+
             <!-- 首頁 -->
             <div id="page-home" class="page-view active">
                 <h1>📱 手機助手</h1>
-                <p class="project-name" id="project-name">載入中...</p>
+                <p class="project-name" id="project-name">專案載入中...</p>
                 <div class="card">
                     <button class="menu-btn" onclick="showPage('overview')">
                         <span class="icon">📷</span>
@@ -587,7 +623,7 @@
             // 初始化
             async function init() {
                 try {
-                    const res = await fetch("/api/project");
+                    const res = await fetch("/api/project?t=" + Date.now());
                     projectData = await res.json();
                     document.getElementById("project-name").innerText =
                         projectData.name || "未命名專案";
@@ -1049,12 +1085,43 @@
                 return new Blob([u8arr], { type: mime });
             }
 
-            // --- 滑動手勢返回功能 (Interactive Transition) ---
+            // --- 滑動手勢返回 & 下拉更新功能 ---
             let touchStartX = 0;
-            let touchData = null; // { activePage, targetPage, targetId, startX, width }
+            let touchStartY = 0;
+            let touchData = null; // { type: 'back' | 'refresh', ... }
+            let isPullingRefresh = false;
 
-            const GESTURE_ZONE_WIDTH = 50; // 僅螢幕左側 50px 區域觸發 (若要全螢幕觸發可設為 Infinity)
-            const SWIPE_THRESHOLD = 200; // 滑動多少像素才算確認返回
+            const GESTURE_ZONE_WIDTH = 50; // 返回手勢左側寬度
+            const SWIPE_THRESHOLD = 230; // 返回確認閾值
+            const PULL_THRESHOLD = 120; // 下拉刷新確認閾值
+
+            // 下拉刷新 UI 元素
+            const refreshLoader = document.getElementById('refresh-loader');
+            const refreshIcon = document.getElementById('refresh-icon');
+            const refreshText = document.getElementById('refresh-text');
+
+            function updateRefreshUI(progress) { // 0.0 ~ 1.0+
+                if (progress >= 1.0) {
+                    refreshText.innerText = '釋放更新';
+                    refreshIcon.style.transform = 'rotate(180deg)';
+                } else {
+                    // refreshText.innerText = '下拉更新';
+                    // refreshIcon.style.transform = 'rotate(0deg)';
+                }
+            }
+
+            function setRefreshingState(refreshing) {
+                if (refreshing) {
+                    refreshText.innerText = '載入中...';
+                    refreshIcon.innerText = '⌛'; // 或使用 class 添加 spinner
+                    refreshIcon.classList.add('spinner');
+                    refreshIcon.style.transform = '';
+                } else {
+                    // refreshText.innerText = '下拉更新';
+                    // refreshIcon.innerText = '⬇️';
+                    // refreshIcon.classList.remove('spinner');
+                }
+            }
 
             // 取得「返回」的目標頁面 ID (不執行跳轉只是查詢)
             function getBackTarget() {
@@ -1090,6 +1157,7 @@
             document.addEventListener("touchstart", (e) => {
                 const touch = e.changedTouches[0];
                 touchStartX = touch.pageX;
+                touchStartY = touch.pageY;
 
                 // 檢查是否在特殊互動區域（如 Slider, CropperCanvas）
                 if (
@@ -1102,28 +1170,24 @@
                     return;
                 }
 
-                const targetId = getBackTarget();
-                if (!targetId) {
-                    touchData = null;
-                    return;
-                }
-
-                // 準備互動數據
+                // 判斷下拉刷新條件：必須在頂部
+                // 注意：這裡假設只有 body/container 本身滾動，或者 page-view 滾動
+                // 由於 css 設定 page-view 為 overflow-y: auto，所以要檢查 activePage.scrollTop
                 const activePage = document.querySelector(".page-view.active");
-                const targetPage = document.getElementById("page-" + targetId);
+                const scrollTop = activePage ? activePage.scrollTop : 0;
+                
+                const backTargetId = getBackTarget();
 
-                if (activePage && targetPage) {
-                    touchData = {
-                        activePage: activePage,
-                        targetPage: targetPage,
-                        targetId: targetId,
-                        startX: touchStartX,
-                        width: window.innerWidth,
-                        isMoving: false
-                    };
-                } else {
-                    touchData = null;
-                }
+                touchData = {
+                    startX: touchStartX,
+                    startY: touchStartY,
+                    scrollTop: scrollTop,
+                    activePage: activePage,
+                    backTargetId: backTargetId,
+                    width: window.innerWidth,
+                    isMoving: false,
+                    type: null // 'back' or 'refresh' or 'scroll'
+                };
             });
 
             document.addEventListener("touchmove", (e) => {
@@ -1131,45 +1195,70 @@
 
                 const touch = e.changedTouches[0];
                 const deltaX = touch.pageX - touchData.startX;
+                const deltaY = touch.pageY - touchData.startY;
+                const absX = Math.abs(deltaX);
+                const absY = Math.abs(deltaY);
 
-                // 僅處理向右滑 (Back)
-                if (deltaX < 0) return; 
+                // 尚未決定意圖
+                if (!touchData.isMoving) {
+                    if (absX < 5 && absY < 5) return; // 移動太小
 
-                // 首次移動時初始化 DOM 狀態
-                if (!touchData.isMoving && deltaX > 5) { // 稍微移動才開始
-                    touchData.isMoving = true;
-                    
-                    // 暫停 transition
-                    touchData.activePage.classList.add('interactive');
-                    touchData.targetPage.classList.add('interactive');
-                    
-                    // 顯示目標頁面並置於底層 (或左側)
-                    touchData.targetPage.style.display = 'block';
-                    touchData.targetPage.style.zIndex = '1';
-                    
-                    // 當前頁面置於頂層
-                    touchData.activePage.style.zIndex = '10';
-                    
-                    // 初始化位置
-                    // activePage 在 0, targetPage 在 -30%
+                    // 判斷意圖
+                    if (absY > absX && deltaY > 0 && touchData.scrollTop === 0) {
+                        // 向下拉 & 在頂部 -> Refresh
+                        touchData.type = 'refresh';
+                        touchData.isMoving = true;
+                        setRefreshingState(false);
+                    } else if (absX > absY && deltaX > 0 && touchData.backTargetId) {
+                        // 向右滑 & 有返回目標 -> Back
+                        touchData.type = 'back';
+                        touchData.isMoving = true;
+                        
+                        // 初始化 Back UI
+                        const targetPage = document.getElementById("page-" + touchData.backTargetId);
+                        touchData.targetPage = targetPage;
+                        
+                        touchData.activePage.classList.add('interactive');
+                        targetPage.classList.add('interactive');
+                        
+                        targetPage.style.display = 'block';
+                        targetPage.style.zIndex = '1';
+                        touchData.activePage.style.zIndex = '10';
+                    } else {
+                        // 其他方向 -> 一般滾動
+                        touchData.type = 'scroll';
+                        touchData.isMoving = true; // 鎖定為滾動，不處理
+                        return;
+                    }
                 }
 
                 if (touchData.isMoving) {
-                    e.preventDefault(); // 防止滾動干擾
-                    
-                    // 計算進度
-                    const progress = Math.min(Math.max(deltaX / touchData.width, 0), 1);
-                    
-                    // 更新位置
-                    // Active Page: 0 -> 100% (translateX: 0px -> width px)
-                    touchData.activePage.style.transform = `translateX(${deltaX}px)`;
-                    
-                    // Target Page: -30% -> 0%
-                    // -30% of width = -0.3 * width
-                    // targetX = -0.3 * width + (progress * 0.3 * width)
-                    const targetStart = -0.3 * touchData.width;
-                    const targetX = targetStart + (progress * Math.abs(targetStart));
-                    touchData.targetPage.style.transform = `translateX(${targetX}px)`;
+                    if (touchData.type === 'refresh') {
+                        // Pull to Refresh
+                        e.preventDefault(); // 阻止原生滾動
+                        
+                        // 增加阻尼感
+                        let translateY = deltaY * 0.5;
+                        if (translateY > PULL_THRESHOLD * 1.5) {
+                            translateY = PULL_THRESHOLD * 1.5 + (translateY - PULL_THRESHOLD * 1.5) * 0.2;
+                        }
+                        
+                        touchData.activePage.style.transform = `translateY(${translateY}px)`;
+                        
+                        const progress = Math.min(translateY / PULL_THRESHOLD, 1.5);
+                        updateRefreshUI(progress);
+                        
+                    } else if (touchData.type === 'back') {
+                        // Swipe Back
+                        e.preventDefault();
+                        
+                        const progress = Math.min(Math.max(deltaX / touchData.width, 0), 1);
+                        touchData.activePage.style.transform = `translateX(${deltaX}px)`;
+                        
+                        const targetStart = -0.3 * touchData.width;
+                        const targetX = targetStart + (progress * Math.abs(targetStart));
+                        touchData.targetPage.style.transform = `translateX(${targetX}px)`;
+                    }
                 }
             });
 
@@ -1179,63 +1268,97 @@
                     return;
                 }
 
-                const touch = e.changedTouches[0];
-                const deltaX = touch.pageX - touchData.startX;
-                const shouldFinish = (deltaX > SWIPE_THRESHOLD) || (deltaX > touchData.width * 0.3);
+                if (touchData.type === 'refresh') {
+                    // --- 處理下拉刷新結果 ---
+                    const touch = e.changedTouches[0];
+                    const deltaY = touch.pageY - touchData.startY;
+                    const effectiveY = deltaY * 0.5; // 約略估計
+                    
+                    const shouldRefresh = effectiveY > PULL_THRESHOLD;
 
-                // 恢復動畫能力 (先移除 interactive)
-                touchData.activePage.classList.remove('interactive');
-                touchData.targetPage.classList.remove('interactive');
-                
-                if (shouldFinish) {
-                    // --- 完成返回動作 (正常速度) ---
-                    touchData.activePage.classList.add('animating');
-                    touchData.targetPage.classList.add('animating');
-
-                    touchData.activePage.style.transform = 'translateX(100%)';
-                    touchData.targetPage.style.transform = 'translateX(0)';
-
-                    setTimeout(() => {
-                        // 清理 Old Page
-                        touchData.activePage.classList.remove('active', 'animating');
-                        touchData.activePage.style.display = '';
+                    // 加入 transition
+                    touchData.activePage.classList.add('animating'); // 有 transition-transform setting?
+                    // 根據 style section, .page-view.animating 是 0.2s transform
+                    
+                    if (shouldRefresh) {
+                        // 鎖定在載入位置
+                        setRefreshingState(true);
+                        touchData.activePage.style.transform = `translateY(60px)`; // Loader height
+                        
+                        setTimeout(() => {
+                            location.reload(); // 簡單暴力刷新
+                            // 如果是 SPA 邏輯：
+                            // await init();
+                            // touchData.activePage.style.transform = '';
+                            // touchData.activePage.classList.remove('animating');
+                        }, 500); // 顯示一下載入動畫
+                    } else {
+                        // 彈回
                         touchData.activePage.style.transform = '';
-                        touchData.activePage.style.zIndex = '';
+                        setTimeout(() => {
+                            touchData.activePage.classList.remove('animating');
+                            updateRefreshUI(0);
+                        }, 200);
+                    }
+                    touchData = null;
 
-                        // 設定 New Page
-                        touchData.targetPage.classList.remove('animating');
-                        touchData.targetPage.classList.add('active');
-                        touchData.targetPage.style.display = '';
-                        touchData.targetPage.style.transform = '';
-                        touchData.targetPage.style.zIndex = '';
+                } else if (touchData.type === 'back') {
+                    // --- 處理滑動返回結果 ---
+                    const touch = e.changedTouches[0];
+                    const deltaX = touch.pageX - touchData.startX;
+                    const shouldFinish = (deltaX > SWIPE_THRESHOLD) || (deltaX > touchData.width * 0.3);
+
+                    touchData.activePage.classList.remove('interactive');
+                    touchData.targetPage.classList.remove('interactive');
+                    
+                    if (shouldFinish) {
+                        touchData.activePage.classList.add('animating');
+                        touchData.targetPage.classList.add('animating');
+
+                        touchData.activePage.style.transform = 'translateX(100%)';
+                        touchData.targetPage.style.transform = 'translateX(0)';
+
+                        setTimeout(() => {
+                            if (touchData && touchData.activePage) { // 防呆
+                                touchData.activePage.classList.remove('active', 'animating');
+                                touchData.activePage.style.display = '';
+                                touchData.activePage.style.transform = '';
+                                touchData.activePage.style.zIndex = '';
+
+                                touchData.targetPage.classList.remove('animating');
+                                touchData.targetPage.classList.add('active');
+                                touchData.targetPage.style.display = '';
+                                touchData.targetPage.style.transform = '';
+                                touchData.targetPage.style.zIndex = '';
+                            }
+                            touchData = null;
+                        }, 200);
+                    } else {
+                        const fastTransition = 'transform 0.15s ease-out, opacity 0.15s ease-out';
                         
-                        touchData = null;
-                    }, 200); // 配合 CSS 0.2s
+                        touchData.activePage.style.transition = fastTransition;
+                        touchData.activePage.style.transform = 'translateX(0)';
+                        
+                        touchData.targetPage.style.transition = fastTransition;
+                        touchData.targetPage.style.transform = 'translateX(-30%)';
+                        touchData.targetPage.style.opacity = '0';
+
+                        setTimeout(() => {
+                            if (touchData && touchData.activePage) {
+                                touchData.activePage.style.transition = '';
+                                touchData.activePage.style.zIndex = '';
+                                
+                                touchData.targetPage.style.transition = '';
+                                touchData.targetPage.style.display = ''; 
+                                touchData.targetPage.style.transform = '';
+                                touchData.targetPage.style.zIndex = '';
+                                touchData.targetPage.style.opacity = '';
+                            }
+                            touchData = null;
+                        }, 150);
+                    }
                 } else {
-                    // --- 取消返回 (Snap Back - 加速並淡出) ---
-                    // 使用 inline transition 覆蓋 CSS class
-                    const fastTransition = 'transform 0.15s ease-out, opacity 0.15s ease-out';
-                    
-                    touchData.activePage.style.transition = fastTransition;
-                    touchData.activePage.style.transform = 'translateX(0)';
-                    
-                    touchData.targetPage.style.transition = fastTransition;
-                    touchData.targetPage.style.transform = 'translateX(-30%)';
-                    touchData.targetPage.style.opacity = '0'; // 淡出背景頁
-
-                    setTimeout(() => {
-                        // 清除 inline 樣式，恢復原狀
-                        touchData.activePage.style.transition = '';
-                        touchData.activePage.style.zIndex = '';
-                        
-                        touchData.targetPage.style.transition = '';
-                        touchData.targetPage.style.display = ''; 
-                        touchData.targetPage.style.transform = '';
-                        touchData.targetPage.style.zIndex = '';
-                        touchData.targetPage.style.opacity = ''; // 恢復透明度
-                        
-                        touchData = null;
-                    }, 150); // 配合 0.15s
+                    touchData = null;
                 }
             });
 
