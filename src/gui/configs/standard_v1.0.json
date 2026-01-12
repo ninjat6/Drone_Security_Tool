@@ -92,8 +92,7 @@
             "section_id": "6",
             "section_name": "6.系統檢測",
             "items": [
-                {
-                    "id": "6.2.1",
+                {   "id": "6.2.1",
                     "name": "身分鑑別",
                     "uid": "GCS_AUTH_CHECK",
                     "criteria_version": "MODA_v1.0",
@@ -124,8 +123,7 @@
                         }
                     ]
                 },
-                {
-                    "id": "6.2.2",
+                {   "id": "6.2.2",
                     "name": "網路服務埠檢測",
                     "uid": "GCS_NET_PORT_SCAN",
                     "criteria_version": "MODA_v1.0",
@@ -147,44 +145,87 @@
                             "content": "受測物所開啟之網路服務與對應埠，與送測資料之內容相符。"
                         }
                     ]
-                }
-            ]
-        },        
-        {
-            "section_id": "100",
-            "section_name": "test_section",
-            "items": [
-                {
-                    "id": "100.1",
-                    "name": "test_item",
-                    "uid": "test_uid",
-                    "criteria_version": "test_criteria_version",
+                },
+                {   "id": "6.2.3",
+                    "name": "系統異常流量",
+                    "uid": "UAV_GCS_SYSTEM_ANOMALY_TRAFFIC",
+                    "criteria_version": "MODA_v1.0",
                     "targets": [
                         "UAV",
                         "GCS"
                     ],
-                    "logic": "OR",
+                    "logic": "AND",
                     "narrative": {
-                        "purpose": "test_purpose",
-                        "method": "test_method",
-                        "criteria": "test_criteria"
+                        "purpose": "確保遙控無人機與地面控制站之通訊無異常流量存在。",
+                        "method": "(1) 對受測物進行系統最大運行時間或至少24小時的流量側錄。\n(2) 比對側錄結果是否與廠商宣告之對外連線對象相符。",
+                        "criteria": "符合下列項目者為通過，否則為未通過\n與廠商宣告之對外連線對象相符。"
                     },
                     "handler": {
-                        "class_name": "CommandTestTool"
+                        "class_name": "BaseTestTool"
                     },
                     "checklist": [
                         {
                             "id": "c1",
-                            "content": "test_checklist_1"
+                            "content": "與廠商宣告之對外連線對象相符。"
+                        }
+                    ]
+                },                
+                {   "id": "6.3.1",
+                    "name": "惡意程式",
+                    "uid": "GCS_MALICIOUS_PROGRAM",
+                    "criteria_version": "MODA_v1.0",
+                    "targets": [
+                        "GCS"
+                    ],
+                    "logic": "AND",
+                    "narrative": {
+                        "purpose": "確保地面控制站無惡意程式。",
+                        "method": "使用惡意程式檢測工具進行完整系統掃描。",
+                        "criteria": "符合下列項目者為通過，否則為未通過\n(1)未發現惡意程式。"
+                    },
+                    "handler": {
+                        "class_name": "BaseTestTool"
+                    },
+                    "checklist": [
+                        {
+                            "id": "c1",
+                            "content": "未發現惡意程式。"
+                        }
+                    ]
+                },                
+                {   "id": "6.3.2",
+                    "name": "弱點掃描",
+                    "uid": "GCS_VULNERABILITY_SCAN",
+                    "criteria_version": "MODA_v1.0",
+                    "targets": [
+                        "GCS"
+                    ],
+                    "logic": "AND",
+                    "narrative": {
+                        "purpose": "查驗地面控制站是否具有CVE常見已知高風險漏洞，及是否為CISA所記載之可利用漏洞。",
+                        "method": "(1) 將測試電腦連接受測物。\n(2) 使用具管理者權限之身分，透過具作業系統、裝置、應用程式評估之弱點掃描工具，對受測物進行弱點掃描。\n(3) 查驗該弱點掃描工具所產生之報告，確認是否存有 CVSS 基礎評分7.0以上(含7.0)之重大、高風險等級漏洞，且該漏洞為是否為CISA 所記載之可利用漏洞。",
+                        "criteria": "符合下列項目者為通過，否則為未通過\n(1) 受測物弱點掃描報告不應存有 CVSS 基礎評分7.0以上(含7.0)之重大、高風險等級漏洞。\n(2) 受測物掃描結果之CVSS 基礎評分7.0以上(含7.0)弱點項目非為CISA 所記載之可利用漏洞。\n(3) 當檢測出之資安風險漏洞以其所具CVSS 最新版本之評分為依據。"
+                    },
+                    "handler": {
+                        "class_name": "BaseTestTool"
+                    },
+                    "checklist": [
+                        {
+                            "id": "c1",
+                            "content": "受測物弱點掃描報告不應存有 CVSS 基礎評分7.0以上(含7.0)之重大、高風險等級漏洞。"
                         },
                         {
                             "id": "c2",
-                            "content": "test_checklist_2"
+                            "content": "受測物掃描結果之CVSS 基礎評分7.0以上(含7.0)弱點項目非為CISA 所記載之可利用漏洞。"
+                        },
+                        {
+                            "id": "c3",
+                            "content": "當檢測出之資安風險漏洞以其所具CVSS 最新版本之評分為依據。"
                         }
                     ]
                 }
             ]
-        },
+        },        
         {
             "section_id": "7",
             "section_name": "7.群飛系統資安檢測",
@@ -251,6 +292,41 @@
                         {
                             "id": "c1",
                             "content": "廠商提供之飛行紀錄等資料儲存位置，儲存內容之數據資料部分應採用FIPS 140-2 Annex A 以上之版本所核可之加密處理機制進行加密。"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "section_id": "99",
+            "section_name": "test_section",
+            "items": [
+                {
+                    "id": "99.9",
+                    "name": "test_item",
+                    "uid": "test_uid",
+                    "criteria_version": "test_criteria_version",
+                    "targets": [
+                        "UAV",
+                        "GCS"
+                    ],
+                    "logic": "OR",
+                    "narrative": {
+                        "purpose": "test_purpose",
+                        "method": "test_method",
+                        "criteria": "test_criteria"
+                    },
+                    "handler": {
+                        "class_name": "CommandTestTool"
+                    },
+                    "checklist": [
+                        {
+                            "id": "c1",
+                            "content": "test_checklist_1"
+                        },
+                        {
+                            "id": "c2",
+                            "content": "test_checklist_2"
                         }
                     ]
                 }
