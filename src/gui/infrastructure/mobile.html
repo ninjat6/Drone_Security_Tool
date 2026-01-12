@@ -619,6 +619,7 @@
             let fabricCanvas = null;
             let originalImageWidth = 0;
             let uploadMode = "item"; // 'item' or 'overview'
+            let originalImageData = null; // 保存原始圖片 DataURL
 
             // 初始化
             async function init() {
@@ -779,6 +780,7 @@
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = function (evt) {
+                        originalImageData = evt.target.result; // 保存原圖
                         document.getElementById("image-to-crop").src =
                             evt.target.result;
                         document.getElementById("upload-item-name").innerText =
@@ -802,6 +804,7 @@
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = function (evt) {
+                        originalImageData = evt.target.result; // 保存原圖
                         document.getElementById("image-to-crop").src =
                             evt.target.result;
                         startCropMode();
@@ -989,6 +992,7 @@
                     cropper.destroy();
                     cropper = null;
                 }
+                originalImageData = null; // 清除原圖資料
             }
 
             // 上傳
@@ -1010,6 +1014,13 @@
                 const blob = dataURLtoBlob(dataURL);
                 const formData = new FormData();
                 formData.append("photo", blob, "upload.jpg");
+                
+                // 附加原始圖片
+                if (originalImageData) {
+                    const originalBlob = dataURLtoBlob(originalImageData);
+                    formData.append("original", originalBlob, "original.jpg");
+                }
+                
                 formData.append(
                     "title",
                     document.getElementById("upload-title").value || ""

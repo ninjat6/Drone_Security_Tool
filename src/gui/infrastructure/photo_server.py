@@ -89,6 +89,7 @@ class PhotoServer(QObject):
         mode = request.form.get("mode", "item")
         title = request.form.get("title", "")
         target = request.form.get("target", "UAV")
+        original_file = request.files.get("original")  # 原始圖片
         
         try:
             if mode == "overview":
@@ -100,6 +101,19 @@ class PhotoServer(QObject):
                 filename = f"{target}_{angle}.jpg"
                 save_path = os.path.join(save_dir, filename)
                 file.save(save_path)
+                
+                # 儲存原圖到 rawdatas/
+                if original_file:
+                    raw_dir = os.path.join(save_dir, "rawdatas")
+                    os.makedirs(raw_dir, exist_ok=True)
+                    raw_filename = f"{target}_{angle}_raw.jpg"
+                    raw_path = os.path.join(raw_dir, raw_filename)
+                    # 防止覆蓋
+                    if os.path.exists(raw_path):
+                        ts_sec = datetime.now().strftime("%H%M%S")
+                        raw_filename = f"{target}_{angle}_raw_{ts_sec}.jpg"
+                        raw_path = os.path.join(raw_dir, raw_filename)
+                    original_file.save(raw_path)
                 
                 self.photo_received.emit(mode, target, angle, save_path, title)
                 
@@ -141,6 +155,21 @@ class PhotoServer(QObject):
                     save_path = os.path.join(save_dir, filename)
                 
                 file.save(save_path)
+                
+                # 儲存原圖到 rawdatas/
+                if original_file:
+                    raw_dir = os.path.join(save_dir, "rawdatas")
+                    os.makedirs(raw_dir, exist_ok=True)
+                    # 使用相同的 base filename 加上 _raw
+                    raw_base = os.path.splitext(filename)[0]  # 去掉 .jpg
+                    raw_filename = f"{raw_base}_raw.jpg"
+                    raw_path = os.path.join(raw_dir, raw_filename)
+                    # 防止覆蓋
+                    if os.path.exists(raw_path):
+                        ts_sec = datetime.now().strftime("%H%M%S")
+                        raw_filename = f"{raw_base}_raw_{ts_sec}.jpg"
+                        raw_path = os.path.join(raw_dir, raw_filename)
+                    original_file.save(raw_path)
                 
                 self.photo_received.emit(mode, item_uid, target, save_path, title)
             
