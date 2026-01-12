@@ -8,6 +8,11 @@
         />
         <title>📱 手機助手</title>
         <style>
+            html {
+                height: 100%;
+                overflow: hidden;
+                overscroll-behavior: none;
+            }
             * {
                 box-sizing: border-box;
             }
@@ -17,13 +22,37 @@
                 margin: 0;
                 padding: 0;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
+                height: 100%;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: none;
                 color: #333;
             }
             .container {
-                max-width: 100%;
-                padding: 20px;
+                position: relative;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                padding: 0; /* padding 移到 page 內部 */
             }
+            /* 通用頁面容器 */
+            .page-view {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                padding: 20px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                display: none; /* 預設隱藏 */
+                background: transparent; /* 讓 body 背景透出來，或者設為白色看需求 */
+            }
+            .page-view.active {
+                display: block;
+            }
+
+            /* --- Restored Styles --- */
             .card {
                 background: white;
                 border-radius: 16px;
@@ -260,6 +289,69 @@
                 padding: 10px;
                 color: #666;
             }
+            /* ------------------- */
+
+            /* 動畫類別 */
+            .page-view {
+                transform: translateX(0);
+                will-change: transform;
+                z-index: 1; /* 預設層級 */
+            }
+            .page-view.interactive {
+                transition: none !important;
+            }
+            .page-view.animating {
+                transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            }
+
+            .anim-enter-right {
+                z-index: 10;
+                animation: slideInRight 0.2s forwards;
+            }
+            .anim-exit-left {
+                z-index: 1;
+                animation: slideOutLeft 0.2s forwards;
+            }
+            .anim-enter-left {
+                z-index: 9; 
+                animation: slideInLeft 0.2s forwards;
+            }
+            .anim-exit-right {
+                z-index: 10;
+                animation: slideOutRight 0.2s forwards;
+            }
+            
+            /* Interactive helper classes */
+            .page-on-left {
+                transform: translateX(-30%);
+                display: block;
+                z-index: 1;
+            }
+            .page-on-right {
+                transform: translateX(30%);
+                display: block;
+                z-index: 1;
+            }
+
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 1; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutLeft {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(-30%); opacity: 0; }
+            }
+            @keyframes slideInLeft {
+                from { transform: translateX(-30%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 1; }
+            }
+        </style>
+
+
         </style>
         <link
             rel="stylesheet"
@@ -269,7 +361,7 @@
     <body>
         <div class="container">
             <!-- 首頁 -->
-            <div id="page-home">
+            <div id="page-home" class="page-view active">
                 <h1>📱 手機助手</h1>
                 <p class="project-name" id="project-name">載入中...</p>
                 <div class="card">
@@ -295,11 +387,11 @@
             </div>
 
             <!-- 總覽照片頁 -->
-            <div id="page-overview" class="hidden">
+            <div id="page-overview" class="page-view">
                 <a
                     href="#"
                     class="back-btn"
-                    onclick="showPage('home'); return false;"
+                    onclick="showPage('home', 'back'); return false;"
                     >← 返回</a
                 >
                 <h1>📷 總覽照片</h1>
@@ -339,11 +431,11 @@
             </div>
 
             <!-- 測項列表頁 -->
-            <div id="page-items" class="hidden">
+            <div id="page-items" class="page-view">
                 <a
                     href="#"
                     class="back-btn"
-                    onclick="showPage('home'); return false;"
+                    onclick="showPage('home', 'back'); return false;"
                     >← 返回</a
                 >
                 <h1>📋 測項佐證</h1>
@@ -355,11 +447,11 @@
             </div>
 
             <!-- 上傳頁（測項佐證） -->
-            <div id="page-upload" class="hidden">
+            <div id="page-upload" class="page-view">
                 <a
                     href="#"
                     class="back-btn"
-                    onclick="showPage('items'); return false;"
+                    onclick="showPage('items', 'back'); return false;"
                     >← 返回測項列表</a
                 >
                 <div class="card">
@@ -507,14 +599,78 @@
                 }
             }
 
-            // 頁面切換
-            function showPage(page) {
-                document
-                    .querySelectorAll('[id^="page-"]')
-                    .forEach((el) => el.classList.add("hidden"));
-                document
-                    .getElementById("page-" + page)
-                    .classList.remove("hidden");
+            // 頁面切換與動畫
+            function showPage(page, direction = "forward") {
+                const currentPages =
+                    document.querySelectorAll(".page-view.active");
+                const targetPage = document.getElementById("page-" + page);
+
+                if (!targetPage) return;
+
+                // 如果已經在這個頁面，則不動作
+                if (targetPage.classList.contains("active")) return;
+
+                // 移除所有正在播放的動畫類別，避免衝突
+                document.querySelectorAll(".page-view").forEach((el) => {
+                    el.classList.remove(
+                        "anim-enter-right",
+                        "anim-exit-left",
+                        "anim-enter-left",
+                        "anim-exit-right"
+                    );
+                });
+
+                // 設定目標頁面為顯示 (尚未添加 active 避免立即顯示，由動畫控制)
+                targetPage.style.display = "block";
+
+                if (currentPages.length > 0) {
+                    const currentPage = currentPages[0];
+
+                    if (direction === "forward") {
+                        // 前進：舊頁面左出，新頁面右進
+                        currentPage.classList.add("anim-exit-left");
+                        targetPage.classList.add("anim-enter-right");
+                    } else {
+                        // 返回：舊頁面右出，新頁面左進
+                        currentPage.classList.add("anim-exit-right");
+                        targetPage.classList.add("anim-enter-left");
+                    }
+
+                    // 動畫結束清理
+                    const onAnimEnd = () => {
+                        currentPage.classList.remove(
+                            "active",
+                            "anim-exit-left",
+                            "anim-exit-right"
+                        );
+                        currentPage.style.display = ""; // 清除 inline style
+
+                        targetPage.classList.remove(
+                            "anim-enter-right",
+                            "anim-enter-left"
+                        );
+                        targetPage.classList.add("active");
+                        targetPage.style.display = ""; // 清除 inline style
+
+                        // 移除監聽器
+                        currentPage.removeEventListener(
+                            "animationend",
+                            onAnimEnd
+                        );
+                    };
+
+                    // 綁定到舊頁面，因為視需要等待舊頁面消失
+                    // 這裡簡化處理：只綁定一個，避免重複觸發
+                    currentPage.addEventListener("animationend", onAnimEnd, {
+                        once: true,
+                    });
+
+                    // 為了保險，設定超時強制清理 (避免動畫未觸發卡住)
+                    setTimeout(onAnimEnd, 220);
+                } else {
+                    // 初始載入（無動畫）
+                    targetPage.classList.add("active");
+                }
             }
 
             // 渲染測項列表
@@ -568,7 +724,7 @@
 
                 uploadMode = "item";
                 resetUpload();
-                showPage("upload");
+                showPage("upload"); // 預設前進動畫
             }
 
             // 總覽照片選擇
@@ -596,7 +752,7 @@
                         document
                             .getElementById("target-select-group")
                             .classList.add("hidden");
-                        showPage("upload");
+                        showPage("upload"); // 預設前進動畫
                         startCropMode();
                     };
                     reader.readAsDataURL(file);
@@ -892,6 +1048,197 @@
                 while (n--) u8arr[n] = bstr.charCodeAt(n);
                 return new Blob([u8arr], { type: mime });
             }
+
+            // --- 滑動手勢返回功能 (Interactive Transition) ---
+            let touchStartX = 0;
+            let touchData = null; // { activePage, targetPage, targetId, startX, width }
+
+            const GESTURE_ZONE_WIDTH = 50; // 僅螢幕左側 50px 區域觸發 (若要全螢幕觸發可設為 Infinity)
+            const SWIPE_THRESHOLD = 200; // 滑動多少像素才算確認返回
+
+            // 取得「返回」的目標頁面 ID (不執行跳轉只是查詢)
+            function getBackTarget() {
+                const homeActive = document
+                    .getElementById("page-home")
+                    .classList.contains("active");
+                if (homeActive) return null;
+
+                const overviewActive = document
+                    .getElementById("page-overview")
+                    .classList.contains("active");
+                if (overviewActive) return "home";
+
+                const itemsActive = document
+                    .getElementById("page-items")
+                    .classList.contains("active");
+                if (itemsActive) return "home";
+
+                const uploadActive = document
+                    .getElementById("page-upload")
+                    .classList.contains("active");
+                if (uploadActive) {
+                    const step0Hidden = document
+                        .getElementById("upload-step0")
+                        .classList.contains("hidden");
+                    if (!step0Hidden) return "items";
+                    // 裁剪/標記步驟中通常禁止滑動返回，以免誤觸
+                    return null;
+                }
+                return null;
+            }
+
+            document.addEventListener("touchstart", (e) => {
+                const touch = e.changedTouches[0];
+                touchStartX = touch.pageX;
+
+                // 檢查是否在特殊互動區域（如 Slider, CropperCanvas）
+                if (
+                    e.target.closest(".cropper-container") ||
+                    e.target.closest(".canvas-container") ||
+                    e.target.closest('input[type="range"]') ||
+                    e.target.closest(".img-container")
+                ) {
+                    touchData = null;
+                    return;
+                }
+
+                const targetId = getBackTarget();
+                if (!targetId) {
+                    touchData = null;
+                    return;
+                }
+
+                // 準備互動數據
+                const activePage = document.querySelector(".page-view.active");
+                const targetPage = document.getElementById("page-" + targetId);
+
+                if (activePage && targetPage) {
+                    touchData = {
+                        activePage: activePage,
+                        targetPage: targetPage,
+                        targetId: targetId,
+                        startX: touchStartX,
+                        width: window.innerWidth,
+                        isMoving: false
+                    };
+                } else {
+                    touchData = null;
+                }
+            });
+
+            document.addEventListener("touchmove", (e) => {
+                if (!touchData) return;
+
+                const touch = e.changedTouches[0];
+                const deltaX = touch.pageX - touchData.startX;
+
+                // 僅處理向右滑 (Back)
+                if (deltaX < 0) return; 
+
+                // 首次移動時初始化 DOM 狀態
+                if (!touchData.isMoving && deltaX > 5) { // 稍微移動才開始
+                    touchData.isMoving = true;
+                    
+                    // 暫停 transition
+                    touchData.activePage.classList.add('interactive');
+                    touchData.targetPage.classList.add('interactive');
+                    
+                    // 顯示目標頁面並置於底層 (或左側)
+                    touchData.targetPage.style.display = 'block';
+                    touchData.targetPage.style.zIndex = '1';
+                    
+                    // 當前頁面置於頂層
+                    touchData.activePage.style.zIndex = '10';
+                    
+                    // 初始化位置
+                    // activePage 在 0, targetPage 在 -30%
+                }
+
+                if (touchData.isMoving) {
+                    e.preventDefault(); // 防止滾動干擾
+                    
+                    // 計算進度
+                    const progress = Math.min(Math.max(deltaX / touchData.width, 0), 1);
+                    
+                    // 更新位置
+                    // Active Page: 0 -> 100% (translateX: 0px -> width px)
+                    touchData.activePage.style.transform = `translateX(${deltaX}px)`;
+                    
+                    // Target Page: -30% -> 0%
+                    // -30% of width = -0.3 * width
+                    // targetX = -0.3 * width + (progress * 0.3 * width)
+                    const targetStart = -0.3 * touchData.width;
+                    const targetX = targetStart + (progress * Math.abs(targetStart));
+                    touchData.targetPage.style.transform = `translateX(${targetX}px)`;
+                }
+            });
+
+            document.addEventListener("touchend", (e) => {
+                if (!touchData || !touchData.isMoving) {
+                    touchData = null;
+                    return;
+                }
+
+                const touch = e.changedTouches[0];
+                const deltaX = touch.pageX - touchData.startX;
+                const shouldFinish = (deltaX > SWIPE_THRESHOLD) || (deltaX > touchData.width * 0.3);
+
+                // 恢復動畫能力 (先移除 interactive)
+                touchData.activePage.classList.remove('interactive');
+                touchData.targetPage.classList.remove('interactive');
+                
+                if (shouldFinish) {
+                    // --- 完成返回動作 (正常速度) ---
+                    touchData.activePage.classList.add('animating');
+                    touchData.targetPage.classList.add('animating');
+
+                    touchData.activePage.style.transform = 'translateX(100%)';
+                    touchData.targetPage.style.transform = 'translateX(0)';
+
+                    setTimeout(() => {
+                        // 清理 Old Page
+                        touchData.activePage.classList.remove('active', 'animating');
+                        touchData.activePage.style.display = '';
+                        touchData.activePage.style.transform = '';
+                        touchData.activePage.style.zIndex = '';
+
+                        // 設定 New Page
+                        touchData.targetPage.classList.remove('animating');
+                        touchData.targetPage.classList.add('active');
+                        touchData.targetPage.style.display = '';
+                        touchData.targetPage.style.transform = '';
+                        touchData.targetPage.style.zIndex = '';
+                        
+                        touchData = null;
+                    }, 200); // 配合 CSS 0.2s
+                } else {
+                    // --- 取消返回 (Snap Back - 加速並淡出) ---
+                    // 使用 inline transition 覆蓋 CSS class
+                    const fastTransition = 'transform 0.15s ease-out, opacity 0.15s ease-out';
+                    
+                    touchData.activePage.style.transition = fastTransition;
+                    touchData.activePage.style.transform = 'translateX(0)';
+                    
+                    touchData.targetPage.style.transition = fastTransition;
+                    touchData.targetPage.style.transform = 'translateX(-30%)';
+                    touchData.targetPage.style.opacity = '0'; // 淡出背景頁
+
+                    setTimeout(() => {
+                        // 清除 inline 樣式，恢復原狀
+                        touchData.activePage.style.transition = '';
+                        touchData.activePage.style.zIndex = '';
+                        
+                        touchData.targetPage.style.transition = '';
+                        touchData.targetPage.style.display = ''; 
+                        touchData.targetPage.style.transform = '';
+                        touchData.targetPage.style.zIndex = '';
+                        touchData.targetPage.style.opacity = ''; // 恢復透明度
+                        
+                        touchData = null;
+                    }, 150); // 配合 0.15s
+                }
+            });
+
 
             // 啟動
             init();
