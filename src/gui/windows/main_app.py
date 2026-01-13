@@ -572,8 +572,8 @@ class MainApp(BorderedMainWindow):
             row.show()
 
             status_map = self.pm.get_test_status_detail(conf)
-            is_any = any(s != STATUS_NOT_TESTED for s in status_map.values())
-            if is_any:
+            is_all_tested = all(s != STATUS_NOT_TESTED for s in status_map.values())
+            if is_all_tested:
                 btn.setStyleSheet(
                     f"QPushButton {{ background-color: {COLOR_BTN_ACTIVE}; color: white; font-weight: bold; }}"
                 )
@@ -596,7 +596,7 @@ class MainApp(BorderedMainWindow):
                     tc = COLOR_TEXT_FAIL
                 elif s == "N/A":
                     c = COLOR_BG_NA
-                    tc = COLOR_TEXT_WHITE
+                    tc = COLOR_TEXT_GRAY
 
                 lbl.setStyleSheet(
                     f"background-color:{c}; color:{tc}; border-radius:4px; font-weight:bold;"
