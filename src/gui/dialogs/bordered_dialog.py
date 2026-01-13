@@ -111,7 +111,7 @@ class BorderedDialog(QDialog):
 
         # 陰影特效
         self.shadow = QGraphicsDropShadowEffect(self)
-        self.shadow.setBlurRadius(3)
+        self.shadow.setBlurRadius(0)
         self.shadow.setOffset(0, 0)
         self.frame.setGraphicsEffect(self.shadow)
 
