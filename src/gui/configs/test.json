@@ -1,6 +1,7 @@
 {
     "standard_name": "測試_規範",
     "standard_version": "MODA_1.0",
+    "default_criteria_version": "MODA_v1.0",
     "project_meta_schema": [
         {
             "key": "project_name",
