@@ -29,7 +29,6 @@ from constants import (
     PHOTO_ANGLES_NAME,
     COLOR_BG_DEFAULT,
 )
-from dialogs.qr_dialog import QRCodeDialog
 from .gallery import GalleryWindow
 
 

@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
 
 from styles import Styles
 from widgets.attachment import AttachmentListWidget
-from dialogs.qr_dialog import QRCodeDialog
 from constants import (
     STATUS_PASS,
     STATUS_FAIL,
