@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>規範 JSON 編輯器</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, sans-serif;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                color: #e0e0e0;
+                min-height: 100vh;
+            }
+
+            /* Header */
+            .header {
+                background: rgba(255, 255, 255, 0.05);
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .header h1 {
+                font-size: 1.3rem;
+                color: #fff;
+            }
+            .header-buttons {
+                display: flex;
+                gap: 10px;
+            }
+            .header-info {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                flex: 1;
+                margin-left: 20px;
+            }
+            .header-info .info-item {
+                font-size: 0.85rem;
+                color: #888;
+            }
+            .header-info .info-value {
+                color: #667eea;
+                font-weight: 500;
+            }
+            .btn {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.9rem;
+                transition: all 0.2s;
+            }
+            .btn-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #fff;
+            }
+            .btn-primary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            .btn-secondary {
+                background: rgba(255, 255, 255, 0.1);
+                color: #e0e0e0;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .btn-secondary:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+            .btn-danger {
+                background: #dc3545;
+                color: #fff;
+            }
+
+            /* Tabs */
+            .tabs {
+                display: flex;
+                background: rgba(255, 255, 255, 0.03);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .tab {
+                padding: 12px 24px;
+                cursor: pointer;
+                border-bottom: 2px solid transparent;
+                transition: all 0.2s;
+                color: #888;
+            }
+            .tab:hover {
+                color: #fff;
+                background: rgba(255, 255, 255, 0.05);
+            }
+            .tab.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+            }
+
+            /* Tab Content */
+            .tab-content {
+                display: none;
+                height: calc(100vh - 120px);
+                overflow: hidden;
+            }
+            .tab-content.active {
+                display: flex;
+            }
+
+            /* Tab 1 & 2: Simple Form */
+            .form-container {
+                padding: 30px;
+                width: 100%;
+                overflow-y: auto;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                color: #aaa;
+                font-size: 0.9rem;
+            }
+            .form-group input,
+            .form-group select {
+                width: 100%;
+                max-width: 500px;
+                padding: 10px 12px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.05);
+                color: #fff;
+                font-size: 1rem;
+            }
+            .form-group input:focus,
+            .form-group select:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+            /* Meta Schema Table */
+            .schema-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }
+            .schema-table th,
+            .schema-table td {
+                padding: 10px;
+                text-align: left;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .schema-table th {
+                color: #888;
+                font-weight: 500;
+                font-size: 0.85rem;
+            }
+            .schema-table input,
+            .schema-table select {
+                width: 100%;
+                padding: 6px 8px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.05);
+                color: #fff;
+                font-size: 0.9rem;
+            }
+            .schema-table input[type="checkbox"] {
+                width: auto;
+            }
+            /* Fix dropdown options visibility in dark theme */
+            select option {
+                background: #1a1a2e;
+                color: #e0e0e0;
+            }
+            /* Drag handle */
+            .drag-handle {
+                cursor: grab;
+                padding: 5px 10px;
+                color: #666;
+                user-select: none;
+                font-size: 1.2rem;
+            }
+            .drag-handle:active {
+                cursor: grabbing;
+            }
+            .schema-table tr.dragging {
+                opacity: 0.4;
+                background: rgba(102, 126, 234, 0.2);
+            }
+            .schema-table tr.drag-over {
+                border-top: 2px solid #667eea;
+            }
+            .schema-table tbody tr {
+                transition: transform 0.15s ease, opacity 0.15s ease;
+            }
+
+            /* Tab 3: Two Column Layout */
+            .two-column {
+                display: flex;
+                width: 100%;
+                height: 100%;
+            }
+
+            /* Sidebar */
+            .sidebar {
+                width: 280px;
+                background: rgba(255, 255, 255, 0.03);
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
+                overflow-y: auto;
+                flex-shrink: 0;
+            }
+            .sidebar-header {
+                padding: 15px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .sidebar-header h3 {
+                font-size: 0.9rem;
+                color: #888;
+            }
+            .section-item {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            .section-header {
+                padding: 12px 15px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: background 0.2s;
+                justify-content: space-between;
+            }
+            .section-header .section-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+            }
+            .section-header .delete-btn {
+                opacity: 0;
+                padding: 2px 6px;
+                font-size: 0.75rem;
+                background: rgba(220, 53, 69, 0.8);
+                border: none;
+                border-radius: 4px;
+                color: #fff;
+                cursor: pointer;
+                transition: opacity 0.2s;
+            }
+            .section-header:hover .delete-btn {
+                opacity: 1;
+            }
+            .section-header:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+            .section-header.active {
+                background: rgba(102, 126, 234, 0.2);
+            }
+            .section-header .arrow {
+                transition: transform 0.2s;
+                color: #666;
+            }
+            .section-header.expanded .arrow {
+                transform: rotate(90deg);
+            }
+            .section-items {
+                display: none;
+                background: rgba(0, 0, 0, 0.2);
+            }
+            .section-items.expanded {
+                display: block;
+            }
+            .item-entry {
+                padding: 10px 15px 10px 35px;
+                cursor: pointer;
+                font-size: 0.9rem;
+                color: #aaa;
+                transition: all 0.2s;
+            }
+            .item-entry:hover {
+                background: rgba(255, 255, 255, 0.05);
+                color: #fff;
+            }
+            .item-entry.active {
+                background: rgba(102, 126, 234, 0.15);
+                color: #667eea;
+            }
+
+            /* Editor Panel */
+            .editor-panel {
+                flex: 1;
+                padding: 20px 30px;
+                overflow-y: auto;
+            }
+            .editor-panel h2 {
+                font-size: 1.2rem;
+                margin-bottom: 20px;
+                color: #fff;
+            }
+            .editor-section {
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .editor-section h3 {
+                font-size: 1rem;
+                color: #888;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .editor-row {
+                display: flex;
+                gap: 15px;
+                margin-bottom: 15px;
+            }
+            .editor-row .form-group {
+                flex: 1;
+                margin-bottom: 0;
+            }
+            .editor-row .form-group.small {
+                flex: 0 0 120px;
+            }
+            textarea {
+                width: 100%;
+                min-height: 100px;
+                padding: 10px 12px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.05);
+                color: #fff;
+                font-size: 0.95rem;
+                resize: vertical;
+                font-family: inherit;
+            }
+            textarea:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+            /* Checklist Preview */
+            .checklist-preview {
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 6px;
+                padding: 15px;
+                margin-top: 10px;
+            }
+            .checklist-preview h4 {
+                font-size: 0.85rem;
+                color: #888;
+                margin-bottom: 10px;
+            }
+            .checklist-item {
+                padding: 8px 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                font-size: 0.9rem;
+                color: #ccc;
+            }
+            .checklist-item:last-child {
+                border-bottom: none;
+            }
+            .checklist-item .id {
+                color: #667eea;
+                margin-right: 8px;
+            }
+
+            /* Checkbox Group */
+            .checkbox-group {
+                display: flex;
+                gap: 20px;
+            }
+            .checkbox-group label {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                cursor: pointer;
+                color: #ccc;
+            }
+
+            /* Action Buttons */
+            .action-buttons {
+                display: flex;
+                gap: 10px;
+                margin-top: 20px;
+            }
+
+            /* Empty State */
+            .empty-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                color: #666;
+            }
+            .empty-state .icon {
+                font-size: 3rem;
+                margin-bottom: 15px;
+            }
+
+            /* Hidden file input */
+            #file-input {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <input type="file" id="file-input" accept=".json" />
+
+        <div class="header">
+            <h1>📋 規範 JSON 編輯器</h1>
+            <div class="header-info">
+                <span class="info-item"
+                    >規範:
+                    <span class="info-value" id="header-standard-name"
+                        >-</span
+                    ></span
+                >
+                <span class="info-item"
+                    >檔案:
+                    <span class="info-value" id="header-filename"
+                        >(未匯入)</span
+                    ></span
+                >
+            </div>
+            <div class="header-buttons">
+                <button class="btn btn-secondary" onclick="importJSON()">
+                    📥 匯入 JSON
+                </button>
+                <button class="btn btn-primary" onclick="exportJSON()">
+                    📤 匯出 JSON
+                </button>
+                <button class="btn btn-secondary" onclick="clearAll()">
+                    🗑️ 清空
+                </button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="info">📄 規範資訊</div>
+            <div class="tab" data-tab="schema">📋 專案欄位</div>
+            <div class="tab" data-tab="standards">📁 測試標準</div>
+        </div>
+
+        <!-- Tab 1: 規範資訊 -->
+        <div id="tab-info" class="tab-content active">
+            <div class="form-container">
+                <div class="form-group">
+                    <label>規範名稱</label>
+                    <input
+                        type="text"
+                        id="standard_name"
+                        placeholder="例：遙控無人機資安檢測規範_v1.0"
+                        oninput="data.standard_name = this.value; updateHeaderInfo();"
+                    />
+                </div>
+                <div class="form-group">
+                    <label>規範版本</label>
+                    <input
+                        type="text"
+                        id="standard_version"
+                        placeholder="例：MODA_1.0"
+                    />
+                </div>
+                <div class="form-group">
+                    <label>預設判定版本 (新增測項時自動套用)</label>
+                    <input
+                        type="text"
+                        id="default_criteria_version"
+                        placeholder="例：MODA_v1.0"
+                    />
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: 專案欄位 -->
+        <div id="tab-schema" class="tab-content">
+            <div class="form-container">
+                <h2>專案欄位設定 (project_meta_schema)</h2>
+                <p style="color: #888; margin-bottom: 20px">
+                    定義建立專案時需要填寫的欄位
+                </p>
+
+                <table class="schema-table" id="schema-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px"></th>
+                            <th style="width: 150px">Key</th>
+                            <th style="width: 150px">Label</th>
+                            <th style="width: 140px">Type</th>
+                            <th style="width: 60px">必填</th>
+                            <th style="width: 80px">顯示總覽</th>
+                            <th style="width: 60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="schema-body"></tbody>
+                </table>
+                <button
+                    class="btn btn-secondary"
+                    style="margin-top: 15px"
+                    onclick="addSchemaField()"
+                >
+                    + 新增欄位
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 3: 測試標準 -->
+        <div id="tab-standards" class="tab-content">
+            <div class="two-column">
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h3>📂 章節結構</h3>
+                        <button
+                            class="btn btn-secondary"
+                            style="padding: 4px 8px; font-size: 0.8rem"
+                            onclick="addSection()"
+                        >
+                            + 章節
+                        </button>
+                    </div>
+                    <div id="sidebar-tree">
+                        <div class="empty-state" style="padding: 40px">
+                            <div>尚無章節</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Editor Panel -->
+                <div class="editor-panel" id="editor-panel">
+                    <div class="empty-state">
+                        <div class="icon">📝</div>
+                        <div>請從左側選擇章節或測項進行編輯</div>
+                        <div style="margin-top: 10px; font-size: 0.9rem">
+                            或點擊「+ 章節」新增
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // ===== 全域資料 =====
+            let data = {
+                standard_name: "",
+                standard_version: "",
+                default_criteria_version: "MODA_v1.0",
+                project_meta_schema: [],
+                test_standards: [],
+            };
+
+            let currentEditType = null; // 'section' or 'item'
+            let currentEditIndex = null; // section index
+            let currentEditItemIndex = null; // item index within section
+            let currentFilename = null;
+
+            function updateHeaderInfo() {
+                document.getElementById("header-standard-name").textContent =
+                    data.standard_name || "-";
+                document.getElementById("header-filename").textContent =
+                    currentFilename || "(未匯入)";
+            }
+
+            // ===== Tab 切換 =====
+            document.querySelectorAll(".tab").forEach((tab) => {
+                tab.addEventListener("click", () => {
+                    document
+                        .querySelectorAll(".tab")
+                        .forEach((t) => t.classList.remove("active"));
+                    document
+                        .querySelectorAll(".tab-content")
+                        .forEach((c) => c.classList.remove("active"));
+                    tab.classList.add("active");
+                    document
+                        .getElementById("tab-" + tab.dataset.tab)
+                        .classList.add("active");
+                });
+            });
+
+            // ===== 匯入/匯出 =====
+            function importJSON() {
+                document.getElementById("file-input").click();
+            }
+
+            document
+                .getElementById("file-input")
+                .addEventListener("change", function (e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        try {
+                            const json = JSON.parse(evt.target.result);
+                            data.standard_name = json.standard_name || "";
+                            data.standard_version = json.standard_version || "";
+                            data.project_meta_schema =
+                                json.project_meta_schema || [];
+                            data.test_standards = json.test_standards || [];
+
+                            document.getElementById("standard_name").value =
+                                data.standard_name;
+                            document.getElementById("standard_version").value =
+                                data.standard_version;
+
+                            renderSchemaTable();
+                            renderSidebar();
+                            clearEditor();
+                            currentFilename = file.name;
+                            updateHeaderInfo();
+                            alert("匯入成功！");
+                        } catch (err) {
+                            alert("JSON 解析失敗：" + err.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                    e.target.value = "";
+                });
+
+            function exportJSON() {
+                // 收集資料
+                data.standard_name =
+                    document.getElementById("standard_name").value;
+                data.standard_version =
+                    document.getElementById("standard_version").value;
+
+                const output = {
+                    standard_name: data.standard_name,
+                    standard_version: data.standard_version,
+                    project_meta_schema: data.project_meta_schema,
+                    test_standards: data.test_standards,
+                };
+
+                const blob = new Blob([JSON.stringify(output, null, 4)], {
+                    type: "application/json",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "standard_config.json";
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            function clearAll() {
+                if (!confirm("確定要清空所有資料嗎？")) return;
+                data = {
+                    standard_name: "",
+                    standard_version: "",
+                    default_criteria_version: "MODA_v1.0",
+                    project_meta_schema: [],
+                    test_standards: [],
+                };
+                document.getElementById("standard_name").value = "";
+                document.getElementById("standard_version").value = "";
+                document.getElementById("default_criteria_version").value =
+                    "MODA_v1.0";
+                renderSchemaTable();
+                renderSidebar();
+                clearEditor();
+            }
+
+            // ===== Schema Table =====
+            let dragSrcIdx = null;
+
+            function renderSchemaTable() {
+                const tbody = document.getElementById("schema-body");
+                tbody.innerHTML = data.project_meta_schema
+                    .map(
+                        (field, idx) => `
+                <tr draggable="true" data-idx="${idx}">
+                    <td><span class="drag-handle">☰</span></td>
+                    <td><input type="text" value="${
+                        field.key || ""
+                    }" onchange="updateSchemaField(${idx}, 'key', this.value)"></td>
+                    <td><input type="text" value="${
+                        field.label || ""
+                    }" onchange="updateSchemaField(${idx}, 'label', this.value)"></td>
+                    <td>
+                        <select onchange="updateSchemaField(${idx}, 'type', this.value)">
+                            <option value="text" ${
+                                field.type === "text" ? "selected" : ""
+                            }>text</option>
+                            <option value="date" ${
+                                field.type === "date" ? "selected" : ""
+                            }>date</option>
+                            <option value="path_selector" ${
+                                field.type === "path_selector" ? "selected" : ""
+                            }>path_selector</option>
+                            <option value="checkbox_group" ${
+                                field.type === "checkbox_group"
+                                    ? "selected"
+                                    : ""
+                            }>checkbox_group</option>
+                            <option value="hidden" ${
+                                field.type === "hidden" ? "selected" : ""
+                            }>hidden</option>
+                        </select>
+                    </td>
+                    <td><input type="checkbox" ${
+                        field.required ? "checked" : ""
+                    } onchange="updateSchemaField(${idx}, 'required', this.checked)"></td>
+                    <td><input type="checkbox" ${
+                        field.show_in_overview ? "checked" : ""
+                    } onchange="updateSchemaField(${idx}, 'show_in_overview', this.checked)"></td>
+                    <td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeSchemaField(${idx})">×</button></td>
+                </tr>
+            `
+                    )
+                    .join("");
+
+                // Add drag event listeners
+                const rows = tbody.querySelectorAll("tr");
+                rows.forEach((row) => {
+                    row.addEventListener("dragstart", handleDragStart);
+                    row.addEventListener("dragend", handleDragEnd);
+                    row.addEventListener("dragover", handleDragOver);
+                    row.addEventListener("dragenter", handleDragEnter);
+                    row.addEventListener("dragleave", handleDragLeave);
+                    row.addEventListener("drop", handleDrop);
+                });
+            }
+
+            function handleDragStart(e) {
+                dragSrcIdx = parseInt(e.currentTarget.dataset.idx);
+                e.currentTarget.classList.add("dragging");
+                e.dataTransfer.effectAllowed = "move";
+            }
+
+            function handleDragEnd(e) {
+                e.currentTarget.classList.remove("dragging");
+                document.querySelectorAll(".schema-table tr").forEach((row) => {
+                    row.classList.remove("drag-over");
+                });
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+            }
+
+            function handleDragEnter(e) {
+                e.currentTarget.classList.add("drag-over");
+            }
+
+            function handleDragLeave(e) {
+                e.currentTarget.classList.remove("drag-over");
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                const targetIdx = parseInt(e.currentTarget.dataset.idx);
+                e.currentTarget.classList.remove("drag-over");
+
+                if (dragSrcIdx !== null && dragSrcIdx !== targetIdx) {
+                    const item = data.project_meta_schema.splice(
+                        dragSrcIdx,
+                        1
+                    )[0];
+                    data.project_meta_schema.splice(targetIdx, 0, item);
+                    renderSchemaTable();
+                }
+                dragSrcIdx = null;
+            }
+
+            function addSchemaField() {
+                data.project_meta_schema.push({
+                    key: "",
+                    label: "",
+                    type: "text",
+                    required: false,
+                    show_in_overview: false,
+                });
+                renderSchemaTable();
+            }
+
+            function updateSchemaField(idx, key, value) {
+                data.project_meta_schema[idx][key] = value;
+            }
+
+            function removeSchemaField(idx) {
+                data.project_meta_schema.splice(idx, 1);
+                renderSchemaTable();
+            }
+
+            // ===== Sidebar =====
+            function renderSidebar() {
+                const container = document.getElementById("sidebar-tree");
+                if (data.test_standards.length === 0) {
+                    container.innerHTML =
+                        '<div class="empty-state" style="padding:40px;"><div>尚無章節</div></div>';
+                    return;
+                }
+
+                container.innerHTML = data.test_standards
+                    .map(
+                        (sec, sIdx) => `
+                <div class="section-item">
+                    <div class="section-header" data-section="${sIdx}">
+                        <div class="section-info" onclick="toggleSection(${sIdx})">
+                            <span class="arrow">▶</span>
+                            <span>${sec.section_id} ${sec.section_name}</span>
+                        </div>
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteSection(${sIdx})">刪除</button>
+                    </div>
+                    <div class="section-items" id="section-items-${sIdx}">
+                        ${(sec.items || [])
+                            .map(
+                                (item, iIdx) => `
+                            <div class="item-entry" onclick="editItem(${sIdx}, ${iIdx})" data-section="${sIdx}" data-item="${iIdx}">
+                                ${item.id} ${item.name}
+                            </div>
+                        `
+                            )
+                            .join("")}
+                        <div class="item-entry" style="color:#667eea;" onclick="addItem(${sIdx})">+ 新增測項</div>
+                    </div>
+                </div>
+            `
+                    )
+                    .join("");
+            }
+
+            function toggleSection(sIdx) {
+                const header = document.querySelector(
+                    `.section-header[data-section="${sIdx}"]`
+                );
+                const items = document.getElementById(`section-items-${sIdx}`);
+                header.classList.toggle("expanded");
+                items.classList.toggle("expanded");
+            }
+
+            function addSection() {
+                const id = prompt("請輸入章節 ID（例：6）");
+                if (!id) return;
+                const name = prompt("請輸入章節名稱（例：6.系統檢測）");
+                if (!name) return;
+
+                data.test_standards.push({
+                    section_id: id,
+                    section_name: name,
+                    items: [],
+                });
+                renderSidebar();
+                editSection(data.test_standards.length - 1);
+            }
+
+            function editSection(sIdx) {
+                currentEditType = "section";
+                currentEditIndex = sIdx;
+                currentEditItemIndex = null;
+
+                // 高亮
+                document
+                    .querySelectorAll(".section-header")
+                    .forEach((h) => h.classList.remove("active"));
+                document
+                    .querySelectorAll(".item-entry")
+                    .forEach((e) => e.classList.remove("active"));
+                document
+                    .querySelector(`.section-header[data-section="${sIdx}"]`)
+                    ?.classList.add("active");
+
+                const sec = data.test_standards[sIdx];
+                document.getElementById("editor-panel").innerHTML = `
+                <h2>編輯章節</h2>
+                <div class="editor-section">
+                    <div class="editor-row">
+                        <div class="form-group small">
+                            <label>章節 ID</label>
+                            <input type="text" id="edit-section-id" value="${sec.section_id}">
+                        </div>
+                        <div class="form-group">
+                            <label>章節名稱</label>
+                            <input type="text" id="edit-section-name" value="${sec.section_name}">
+                        </div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="saveSection()">💾 儲存章節</button>
+                    <button class="btn btn-danger" onclick="deleteSection(${sIdx})">🗑️ 刪除章節</button>
+                </div>
+            `;
+            }
+
+            function saveSection() {
+                if (currentEditType !== "section") return;
+                data.test_standards[currentEditIndex].section_id =
+                    document.getElementById("edit-section-id").value;
+                data.test_standards[currentEditIndex].section_name =
+                    document.getElementById("edit-section-name").value;
+                renderSidebar();
+            }
+
+            function deleteSection(sIdx) {
+                if (!confirm("確定要刪除此章節及其所有測項嗎？")) return;
+                data.test_standards.splice(sIdx, 1);
+                renderSidebar();
+                clearEditor();
+            }
+
+            // ===== Item Editor =====
+            function addItem(sIdx) {
+                const defaultVersion =
+                    document.getElementById("default_criteria_version")
+                        ?.value || "MODA_v1.0";
+                data.test_standards[sIdx].items.push({
+                    id: "",
+                    name: "",
+                    uid: "",
+                    criteria_version: defaultVersion,
+                    targets: [],
+                    logic: "AND",
+                    narrative: { purpose: "", method: "", criteria: "" },
+                    handler: { class_name: "BaseTestTool" },
+                    checklist: [],
+                });
+                renderSidebar();
+                editItem(sIdx, data.test_standards[sIdx].items.length - 1);
+            }
+
+            function editItem(sIdx, iIdx) {
+                currentEditType = "item";
+                currentEditIndex = sIdx;
+                currentEditItemIndex = iIdx;
+
+                // 高亮
+                document
+                    .querySelectorAll(".section-header")
+                    .forEach((h) => h.classList.remove("active"));
+                document
+                    .querySelectorAll(".item-entry")
+                    .forEach((e) => e.classList.remove("active"));
+                document
+                    .querySelector(
+                        `.item-entry[data-section="${sIdx}"][data-item="${iIdx}"]`
+                    )
+                    ?.classList.add("active");
+
+                // 展開 section
+                document
+                    .querySelector(`.section-header[data-section="${sIdx}"]`)
+                    ?.classList.add("expanded");
+                document
+                    .getElementById(`section-items-${sIdx}`)
+                    ?.classList.add("expanded");
+
+                const item = data.test_standards[sIdx].items[iIdx];
+                const hasUAV = item.targets?.includes("UAV");
+                const hasGCS = item.targets?.includes("GCS");
+
+                document.getElementById("editor-panel").innerHTML = `
+                <h2>編輯測項</h2>
+                <div class="editor-section">
+                    <h3>基本資訊</h3>
+                    <div class="editor-row">
+                        <div class="form-group small">
+                            <label>測項 ID</label>
+                            <input type="text" id="edit-item-id" value="${
+                                item.id || ""
+                            }">
+                        </div>
+                        <div class="form-group">
+                            <label>測項名稱</label>
+                            <input type="text" id="edit-item-name" value="${
+                                item.name || ""
+                            }">
+                        </div>
+                    </div>
+                    <div class="editor-row">
+                        <div class="form-group">
+                            <label>UID</label>
+                            <input type="text" id="edit-item-uid" value="${
+                                item.uid || ""
+                            }">
+                        </div>
+                        <div class="form-group">
+                            <label>判定版本</label>
+                            <input type="text" id="edit-item-version" value="${
+                                item.criteria_version || ""
+                            }">
+                        </div>
+                    </div>
+                    <div class="editor-row">
+                        <div class="form-group">
+                            <label>測試對象</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" id="edit-target-uav" ${
+                                    hasUAV ? "checked" : ""
+                                }> UAV</label>
+                                <label><input type="checkbox" id="edit-target-gcs" ${
+                                    hasGCS ? "checked" : ""
+                                }> GCS</label>
+                            </div>
+                        </div>
+                        <div class="form-group small">
+                            <label>邏輯</label>
+                            <select id="edit-item-logic">
+                                <option value="AND" ${
+                                    item.logic === "AND" ? "selected" : ""
+                                }>AND</option>
+                                <option value="OR" ${
+                                    item.logic === "OR" ? "selected" : ""
+                                }>OR</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Handler</label>
+                            <select id="edit-item-handler">
+                                <option value="BaseTestTool" ${
+                                    item.handler?.class_name === "BaseTestTool"
+                                        ? "selected"
+                                        : ""
+                                }>BaseTestTool</option>
+                                <option value="NmapTestTool" ${
+                                    item.handler?.class_name === "NmapTestTool"
+                                        ? "selected"
+                                        : ""
+                                }>NmapTestTool</option>
+                                <option value="CommandTestTool" ${
+                                    item.handler?.class_name ===
+                                    "CommandTestTool"
+                                        ? "selected"
+                                        : ""
+                                }>CommandTestTool</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="editor-section">
+                    <h3>測試敘述</h3>
+                    <div class="form-group">
+                        <label>測試目的</label>
+                        <textarea id="edit-purpose">${
+                            item.narrative?.purpose || ""
+                        }</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>測試方法</label>
+                        <textarea id="edit-method">${
+                            item.narrative?.method || ""
+                        }</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>判定標準 (會自動拆解為 Checklist)</label>
+                        <textarea id="edit-criteria" oninput="previewChecklist()">${
+                            item.narrative?.criteria || ""
+                        }</textarea>
+                        <div class="checklist-preview" id="checklist-preview">
+                            <h4>Checklist 預覽</h4>
+                            <div id="checklist-items"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="saveItem()">💾 儲存測項</button>
+                    <button class="btn btn-danger" onclick="deleteItem()">🗑️ 刪除測項</button>
+                </div>
+            `;
+
+                previewChecklist();
+            }
+
+            function previewChecklist() {
+                const criteria =
+                    document.getElementById("edit-criteria")?.value || "";
+                const lines = criteria.split("\n").filter((l) => l.trim());
+                const checklistItems = [];
+
+                lines.forEach((line, idx) => {
+                    const match = line.match(/^\s*\(?\d+\)?[\.\s]*(.*)/);
+                    if (match) {
+                        checklistItems.push(match[1].trim());
+                    } else if (idx > 0) {
+                        // 非第一行且非編號格式，也加入
+                        checklistItems.push(line.trim());
+                    }
+                });
+
+                const container = document.getElementById("checklist-items");
+                if (checklistItems.length === 0) {
+                    container.innerHTML =
+                        '<div style="color:#666;">無法解析 Checklist 項目</div>';
+                } else {
+                    container.innerHTML = checklistItems
+                        .map(
+                            (item, idx) => `
+                    <div class="checklist-item"><span class="id">c${
+                        idx + 1
+                    }</span>${item}</div>
+                `
+                        )
+                        .join("");
+                }
+            }
+
+            function saveItem() {
+                if (currentEditType !== "item") return;
+
+                const item =
+                    data.test_standards[currentEditIndex].items[
+                        currentEditItemIndex
+                    ];
+
+                item.id = document.getElementById("edit-item-id").value;
+                item.name = document.getElementById("edit-item-name").value;
+                item.uid = document.getElementById("edit-item-uid").value;
+                item.criteria_version =
+                    document.getElementById("edit-item-version").value;
+                item.logic = document.getElementById("edit-item-logic").value;
+                item.handler = {
+                    class_name:
+                        document.getElementById("edit-item-handler").value,
+                };
+
+                // Targets
+                item.targets = [];
+                if (document.getElementById("edit-target-uav").checked)
+                    item.targets.push("UAV");
+                if (document.getElementById("edit-target-gcs").checked)
+                    item.targets.push("GCS");
+
+                // Narrative
+                item.narrative = {
+                    purpose: document.getElementById("edit-purpose").value,
+                    method: document.getElementById("edit-method").value,
+                    criteria: document.getElementById("edit-criteria").value,
+                };
+
+                // Checklist
+                const criteria =
+                    document.getElementById("edit-criteria").value || "";
+                const lines = criteria.split("\n").filter((l) => l.trim());
+                const checklistItems = [];
+                lines.forEach((line, idx) => {
+                    const match = line.match(/^\s*\(?\d+\)?[\.\s]*(.*)/);
+                    if (match) {
+                        checklistItems.push(match[1].trim());
+                    } else if (idx > 0) {
+                        checklistItems.push(line.trim());
+                    }
+                });
+                item.checklist = checklistItems.map((content, idx) => ({
+                    id: `c${idx + 1}`,
+                    content: content,
+                }));
+
+                renderSidebar();
+                alert("已儲存！");
+            }
+
+            function deleteItem() {
+                if (!confirm("確定要刪除此測項嗎？")) return;
+                data.test_standards[currentEditIndex].items.splice(
+                    currentEditItemIndex,
+                    1
+                );
+                renderSidebar();
+                clearEditor();
+            }
+
+            function clearEditor() {
+                currentEditType = null;
+                currentEditIndex = null;
+                currentEditItemIndex = null;
+                document.getElementById("editor-panel").innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📝</div>
+                    <div>請從左側選擇章節或測項進行編輯</div>
+                    <div style="margin-top:10px; font-size:0.9rem;">或點擊「+ 章節」新增</div>
+                </div>
+            `;
+            }
+
+            // ===== 初始化 =====
+            renderSchemaTable();
+            renderSidebar();
+        </script>
+    </body>
+</html>
