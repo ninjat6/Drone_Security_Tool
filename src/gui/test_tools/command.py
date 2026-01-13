@@ -255,7 +255,7 @@ class CommandTestToolView(BaseTestToolView):
 class CommandWorker(QThread):
     """
     通用指令執行工作執行緒 - 避免 UI 凍結
-    支援 pkexec 提權、即時輸出、取消執行
+    支援即時輸出、取消執行 (跨平台 Windows / Linux / macOS)
     """
 
     output_ready = Signal(str)  # 即時輸出
@@ -269,41 +269,68 @@ class CommandWorker(QThread):
 
     def run(self):
         import subprocess
-        import select
+        from threading import Thread
+        from queue import Queue, Empty
+
+        # 跨平台非阻塞讀取輔助函數
+        def enqueue_output(pipe, queue):
+            """在背景執行緒中讀取 pipe 並放入 queue"""
+            try:
+                for line in iter(pipe.readline, ""):
+                    queue.put(line)
+                pipe.close()
+            except:
+                pass
 
         try:
-            self.process = subprocess.Popen(
-                self.command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                start_new_session=True,
-            )
+            # 根據平台設定不同參數
+            popen_kwargs = {
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.STDOUT,
+                "text": True,
+                "bufsize": 1,
+            }
 
-            # 使用 select 進行非阻塞讀取，每 0.1 秒檢查一次取消狀態
+            if sys.platform == "win32":
+                # Windows: 使用 CREATE_NEW_PROCESS_GROUP
+                popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+            else:
+                # Unix: 使用 start_new_session
+                popen_kwargs["start_new_session"] = True
+
+            self.process = subprocess.Popen(self.command, **popen_kwargs)
+
+            # 使用 Queue 進行跨平台非阻塞讀取
+            output_queue = Queue()
+            reader_thread = Thread(
+                target=enqueue_output,
+                args=(self.process.stdout, output_queue),
+                daemon=True,
+            )
+            reader_thread.start()
+
+            # 主迴圈：每 0.1 秒檢查一次輸出和取消狀態
             while True:
                 if self._is_cancelled:
                     break
 
-                # 檢查是否有資料可讀 (timeout 0.1 秒)
-                ready, _, _ = select.select([self.process.stdout], [], [], 0.1)
-
-                if ready:
-                    line = self.process.stdout.readline()
-                    if line == "":
-                        break  # EOF - 程序已結束
+                # 嘗試從 queue 讀取輸出 (非阻塞)
+                try:
+                    line = output_queue.get(timeout=0.1)
                     self.output_ready.emit(line)
+                except Empty:
+                    pass
 
                 # 檢查程序是否已結束
                 if self.process.poll() is not None:
                     # 讀取剩餘輸出
-                    remaining = self.process.stdout.read()
-                    if remaining:
-                        self.output_ready.emit(remaining)
+                    while True:
+                        try:
+                            line = output_queue.get_nowait()
+                            self.output_ready.emit(line)
+                        except Empty:
+                            break
                     break
-
-            self.process.stdout.close()
 
             # 只有在非取消狀態下才等待程序結束
             if not self._is_cancelled:
@@ -324,13 +351,22 @@ class CommandWorker(QThread):
     def cancel(self):
         self._is_cancelled = True
         if self.process:
-            # 殺掉整個 Process Group
             try:
-                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                if sys.platform == "win32":
+                    # Windows: 使用 taskkill 終止 process tree
+                    import subprocess as sp
+
+                    sp.run(
+                        ["taskkill", "/F", "/T", "/PID", str(self.process.pid)],
+                        capture_output=True,
+                    )
+                else:
+                    # Unix: 殺掉整個 Process Group
+                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
             except:
                 pass
 
-            # 強制殺死 pkexec
+            # 備用：強制殺死主程序
             try:
                 self.process.kill()
             except:
@@ -364,9 +400,17 @@ class CommandTestTool(BaseTestTool):
     log_saved = Signal(str)  # log_path
 
     def __init__(
-        self, config, result_data, target, project_manager=None, save_callback=None, is_shared=False
+        self,
+        config,
+        result_data,
+        target,
+        project_manager=None,
+        save_callback=None,
+        is_shared=False,
     ):
-        super().__init__(config, result_data, target, project_manager, save_callback, is_shared)
+        super().__init__(
+            config, result_data, target, project_manager, save_callback, is_shared
+        )
 
         # 指令執行狀態
         self.last_command = ""
@@ -449,8 +493,11 @@ class CommandTestTool(BaseTestTool):
 
         # 取得檢測項目資料夾（支援多目標）
         item_folder = self.pm.get_item_folder(
-            self.item_id, self.item_name,
-            targets=self.targets, target=self.target, is_shared=self.is_shared
+            self.item_id,
+            self.item_name,
+            targets=self.targets,
+            target=self.target,
+            is_shared=self.is_shared,
         )
         report_dir = os.path.join(self.project_path, item_folder)
         os.makedirs(report_dir, exist_ok=True)
@@ -531,8 +578,11 @@ class CommandTestTool(BaseTestTool):
 
         # 取得檢測項目資料夾（支援多目標）
         item_folder = self.pm.get_item_folder(
-            self.item_id, self.item_name,
-            targets=self.targets, target=self.target, is_shared=self.is_shared
+            self.item_id,
+            self.item_name,
+            targets=self.targets,
+            target=self.target,
+            is_shared=self.is_shared,
         )
         report_dir = os.path.join(self.project_path, item_folder)
         os.makedirs(report_dir, exist_ok=True)
