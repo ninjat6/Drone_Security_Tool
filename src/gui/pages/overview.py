@@ -46,6 +46,7 @@ class OverviewPage(QWidget):
         main_layout = QVBoxLayout(self)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
         content_widget = QWidget()
         self.layout = QVBoxLayout(content_widget)
 
@@ -91,7 +92,7 @@ class OverviewPage(QWidget):
             front_v = QVBoxLayout(front_container)
             lbl_img = QLabel("正面照片 (Front)\n未上傳")
             lbl_img.setFrameShape(QFrame.NoFrame)
-            lbl_img.setFixedSize(320, 240)
+            lbl_img.setFixedSize(240, 180)
             lbl_img.setAlignment(Qt.AlignCenter)
             btn_view = QPushButton("檢視六視角照片")
             btn_view.clicked.connect(partial(self.open_gallery, t))
@@ -102,11 +103,12 @@ class OverviewPage(QWidget):
             self.photo_labels[front_key] = lbl_img
 
             other_angles_group = QGroupBox("其他角度狀態")
-            other_v = QVBoxLayout(other_angles_group)
+            other_grid = QGridLayout(other_angles_group)
+            other_grid.setSpacing(5)
+            grid_row = 0
+            grid_col = 0
             for angle in PHOTO_ANGLES_ORDER:
-                if angle == "front":
-                    continue
-                angle_key = f"{t}_{angle}"
+                status_key = f"{t}_{angle}_status"
                 row_w = QWidget()
                 row_h = QHBoxLayout(row_w)
                 row_h.setContentsMargins(0, 0, 0, 0)
@@ -117,11 +119,15 @@ class OverviewPage(QWidget):
                 row_h.addWidget(lbl_status)
                 row_h.addWidget(lbl_text)
                 row_h.addStretch()
-                other_v.addWidget(row_w)
-                self.photo_labels[angle_key] = lbl_status
+                other_grid.addWidget(row_w, grid_row, grid_col)
+                self.photo_labels[status_key] = lbl_status
+                grid_col += 1
+                if grid_col >= 2:  # 每排 2 個
+                    grid_col = 0
+                    grid_row += 1
             self.photo_grid.addWidget(other_angles_group, 3, col, 1, 1)
 
-        self.layout.addStretch()
+        # self.layout.addStretch()
         scroll.setWidget(content_widget)
         main_layout.addWidget(scroll)
 
@@ -149,7 +155,15 @@ class OverviewPage(QWidget):
                 self.info_layout.addRow(f"{label_text}:", val_label)
 
         for key, widget in self.photo_labels.items():
-            path_key = f"{key}_path"
+            # 判斷是否為狀態圓點（含 _status 後綴）
+            if key.endswith("_status"):
+                # 狀態圓點：從 key 中去掉 _status 後綴來取得路徑
+                base_key = key[:-7]  # 移除 "_status"
+                path_key = f"{base_key}_path"
+            else:
+                # 照片 Label
+                path_key = f"{key}_path"
+            
             rel_path = info_data.get(path_key)
             has_file = False
             full_path = ""
@@ -157,7 +171,17 @@ class OverviewPage(QWidget):
                 full_path = os.path.join(self.pm.current_project_path, rel_path)
                 if os.path.exists(full_path):
                     has_file = True
-            if "front" in key:
+            
+            if key.endswith("_status"):
+                # 狀態圓點的更新邏輯
+                if has_file:
+                    widget.setStyleSheet("color: green; font-size: 14pt;")
+                    widget.setToolTip("已上傳")
+                else:
+                    widget.setStyleSheet("color: red; font-size: 14pt;")
+                    widget.setToolTip("尚未上傳")
+            else:
+                # 照片 Label 的更新邏輯（只有正面照片）
                 if has_file:
                     pix = QPixmap(full_path)
                     if not pix.isNull():
@@ -167,13 +191,6 @@ class OverviewPage(QWidget):
                         widget.setPixmap(scaled_pix)
                 else:
                     widget.setText("正面照片 (Front)\n未上傳")
-            else:
-                if has_file:
-                    widget.setStyleSheet("color: green; font-size: 14pt;")
-                    widget.setToolTip("已上傳")
-                else:
-                    widget.setStyleSheet("color: red; font-size: 14pt;")
-                    widget.setToolTip("尚未上傳")
 
         while self.prog_l.count():
             child = self.prog_l.takeAt(0)

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTabWidget,
     QScrollArea,
+    QFrame,
     QFileDialog,
     QMessageBox,
     QInputDialog,
@@ -70,7 +71,7 @@ class MainApp(BorderedMainWindow):
         self.config = self._get_initial_config()
 
         # 設定主視窗大小
-        self.resize(1400, 900)
+        self.resize(900, 850)
 
         # UI 初始化
         self.cw = QWidget()
@@ -159,6 +160,7 @@ class MainApp(BorderedMainWindow):
             v.addWidget(QLabel(f"<h3>{sec['section_name']}</h3>"))
             scr = QScrollArea()
             scr.setWidgetResizable(True)
+            scr.setFrameShape(QFrame.NoFrame)
             v.addWidget(scr)
             cont = QWidget()
             cv = QVBoxLayout(cont)
