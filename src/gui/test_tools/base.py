@@ -256,7 +256,7 @@ class BaseTestToolView(QWidget):
         display_html = (
             f"{S.HTML_METHOD_TITLE}"
             f"<div style='margin-left:10px; color:#555;'>{method_html}</div>"
-            f"{S.HTML_CRITERIA_TITLE}"
+            f"<div style='margin-top:8px;'>{S.HTML_CRITERIA_TITLE}</div>"
             f"<div style='margin-left:10px; color:#D32F2F;'>{criteria_html}</div>"
         )
 
@@ -335,7 +335,8 @@ class BaseTestToolView(QWidget):
         v3 = QVBoxLayout()
         self.user_note = QTextEdit()
         self.user_note.setPlaceholderText(S.HINT_NOTE)
-        self.user_note.setFixedHeight(80)
+        # self.user_note.setMinimumHeight(60)
+        self.user_note.setMaximumHeight(150)
         self.user_note.textChanged.connect(
             lambda: self.note_changed.emit(self.user_note.toPlainText())
         )
@@ -428,6 +429,10 @@ class BaseTestTool(QObject):
         if self.pm:
             self.pm.photo_received.connect(self._on_photo_received)
 
+        # 載入已存資料
+        if result_data:
+            self._load_data(result_data)
+
     def cleanup(self):
         """清理資源，斷開信號連接"""
         if self.pm:
@@ -436,10 +441,6 @@ class BaseTestTool(QObject):
             except (RuntimeError, TypeError):
                 # 可能已經斷開或物件已銷毀
                 pass
-
-        # 載入已存資料
-        if result_data:
-            self._load_data(result_data)
 
     def _create_view(self, config) -> BaseTestToolView:
         """
@@ -490,26 +491,58 @@ class BaseTestTool(QObject):
         if self.view.result_combo:
             self.view.result_combo.setStyleSheet(s)
 
-        # 更新備註 (僅在自動判定或狀態不符時更新)
+        # 自動更新備註
         current_note = self.view.get_note()
+        check_states = self.view.get_check_states()
+
+        # 產生已勾選項目的內容列表
+        checked_list = [
+            self.item_content_map.get(cid, cid)
+            for cid, checked in check_states.items()
+            if checked
+        ]
 
         if STATUS_PASS in status:
-            if not current_note or "未通過" in current_note or "不適用" in current_note:
-                self.view.set_note("符合規範要求。")
+            # 通過：列出所有符合的項目
+            if checked_list:
+                items_text = "\n".join(
+                    f"  - {r}" for r in checked_list
+                )
+                pass_reason = f"【判定結果】通過\n\n符合項目：\n{items_text}"
+            else:
+                pass_reason = "【判定結果】通過\n\n符合規範要求。"
+            # 只有備註為空或是系統自動產生的才更新
+            if not current_note or current_note.startswith("【判定結果】") or current_note.startswith("符合規範") or current_note.startswith("未通過") or current_note.startswith("不適用"):
+                self.view.set_note(pass_reason)
 
         elif STATUS_FAIL in status:
-            if "符合規範" in current_note or "不適用" in current_note:
-                if not fail_reason:
-                    _, fail_reason = self.calculate_result()
-                self.view.set_note(fail_reason if fail_reason else "未通過，原因：")
+            # 未通過：先列出已符合的，再列出未符合的
+            unchecked_list = [
+                self.item_content_map.get(cid, cid)
+                for cid, checked in check_states.items()
+                if not checked
+            ]
+            parts = ["【判定結果】未通過"]
+            if checked_list:
+                items_text = "\n".join(f"  - {r}" for r in checked_list)
+                parts.append(f"已符合項目：\n{items_text}")
+            if unchecked_list:
+                items_text = "\n".join(f"  - {r}" for r in unchecked_list)
+                parts.append(f"未符合項目：\n{items_text}")
+            fail_note = "\n\n".join(parts)
+
+            if not current_note or current_note.startswith("【判定結果】") or current_note.startswith("符合規範") or current_note.startswith("未通過") or current_note.startswith("已符合") or current_note.startswith("不適用"):
+                self.view.set_note(fail_note)
 
         elif STATUS_NA in status:
             if (
                 not current_note
-                or "符合規範" in current_note
-                or "未通過" in current_note
+                or current_note.startswith("【判定結果】")
+                or current_note.startswith("符合規範")
+                or current_note.startswith("未通過")
+                or current_note.startswith("已符合")
             ):
-                self.view.set_note("不適用，原因如下：\n")
+                self.view.set_note("【判定結果】不適用\n\n原因如下：\n")
 
     def calculate_result(self) -> Tuple[str, str]:
         """計算判定結果"""
