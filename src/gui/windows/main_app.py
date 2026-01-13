@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QApplication,
 )
 from PySide6.QtGui import QShortcut, QKeySequence
+from PySide6.QtCore import QUrl
 
 from constants import (
     PROJECT_TYPE_FULL,
@@ -213,6 +214,8 @@ class MainApp(BorderedMainWindow):
         self.a_merge = t_menu.addAction(
             "匯入各別檢測結果 (Merge Ad-Hoc)", self.on_merge
         )
+        t_menu.addSeparator()
+        t_menu.addAction("📋 規範 JSON 編輯器", self.on_standard_editor)
 
     def _init_zoom(self):
         self.shortcut_zoom_in = QShortcut(QKeySequence.ZoomIn, self)
@@ -646,6 +649,16 @@ class MainApp(BorderedMainWindow):
 
         if item_uid in TARGETS:
             self.refresh_ui()
+
+    def on_standard_editor(self):
+        """開啟規範 JSON 編輯器 (使用系統瀏覽器)"""
+        import webbrowser
+        html_path = os.path.join(
+            os.path.dirname(__file__),
+            "..", "infrastructure", "standard_editor.html"
+        )
+        html_path = os.path.abspath(html_path)
+        webbrowser.open(f"file://{html_path}")
 
     def closeEvent(self, event):
         """當 MainApp 關閉時，關閉所有已開啟的檢測視窗"""

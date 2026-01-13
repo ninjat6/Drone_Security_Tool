@@ -600,12 +600,31 @@
                     const reader = new FileReader();
                     reader.onload = function (evt) {
                         try {
-                            const json = JSON.parse(evt.target.result);
-                            data.standard_name = json.standard_name || "";
-                            data.standard_version = json.standard_version || "";
-                            data.project_meta_schema =
-                                json.project_meta_schema || [];
-                            data.test_standards = json.test_standards || [];
+                            let content = evt.target.result;
+                            // 移除 BOM
+                            if (content.charCodeAt(0) === 0xfeff) {
+                                content = content.slice(1);
+                            }
+                            try {
+                                const json = JSON.parse(content);
+                                data.standard_name = json.standard_name || "";
+                                data.standard_version =
+                                    json.standard_version || "";
+                                data.project_meta_schema =
+                                    json.project_meta_schema || [];
+                                data.test_standards = json.test_standards || [];
+                            } catch (e) {
+                                alert(
+                                    `JSON 解析失敗: ${e.message}\n` +
+                                        `位置: ${e.at || "未知"}\n` +
+                                        `前 50 字元: ${content.substring(
+                                            0,
+                                            50
+                                        )}\n` +
+                                        `長度: ${content.length}`
+                                );
+                                return;
+                            }
 
                             document.getElementById("standard_name").value =
                                 data.standard_name;
@@ -626,16 +645,105 @@
                     e.target.value = "";
                 });
 
+            // Header Inputs Auto-save
+            [
+                "standard_name",
+                "standard_version",
+                "default_criteria_version",
+            ].forEach((id) => {
+                document
+                    .getElementById(id)
+                    ?.addEventListener("input", saveToLocalStorage);
+            });
+
+            const STORAGE_KEY = "TEST_STANDARD_EDITOR_DATA";
+            const STORAGE_FILENAME_KEY = "TEST_STANDARD_EDITOR_FILENAME";
+
+            function saveToLocalStorage() {
+                try {
+                    // Sync header fields to data before saving
+                    data.standard_name =
+                        document.getElementById("standard_name")?.value || "";
+                    data.standard_version =
+                        document.getElementById("standard_version")?.value ||
+                        "";
+                    data.default_criteria_version =
+                        document.getElementById("default_criteria_version")
+                            ?.value || "MODA_v1.0";
+
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                    if (currentFilename) {
+                        localStorage.setItem(
+                            STORAGE_FILENAME_KEY,
+                            currentFilename
+                        );
+                    }
+                } catch (e) {
+                    console.error("Failed to save to localStorage", e);
+                }
+            }
+
+            function loadFromLocalStorage() {
+                try {
+                    const storedData = localStorage.getItem(STORAGE_KEY);
+                    const storedFilename =
+                        localStorage.getItem(STORAGE_FILENAME_KEY);
+
+                    if (storedData) {
+                        const parsedData = JSON.parse(storedData);
+                        if (
+                            parsedData &&
+                            Array.isArray(parsedData.test_standards)
+                        ) {
+                            data.standard_name = parsedData.standard_name || "";
+                            data.standard_version =
+                                parsedData.standard_version || "";
+                            data.project_meta_schema =
+                                parsedData.project_meta_schema || [];
+                            data.test_standards =
+                                parsedData.test_standards || [];
+                            data.default_criteria_version =
+                                parsedData.default_criteria_version ||
+                                "MODA_v1.0";
+
+                            if (storedFilename)
+                                currentFilename = storedFilename;
+
+                            document.getElementById("standard_name").value =
+                                data.standard_name;
+                            document.getElementById("standard_version").value =
+                                data.standard_version;
+                            const verEl = document.getElementById(
+                                "default_criteria_version"
+                            );
+                            if (verEl)
+                                verEl.value = data.default_criteria_version;
+
+                            updateHeaderInfo();
+                            renderSchemaTable();
+                            renderSidebar();
+                            console.log("Loaded data from localStorage");
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load from localStorage", e);
+                }
+            }
+
             function exportJSON() {
                 // 收集資料
                 data.standard_name =
                     document.getElementById("standard_name").value;
                 data.standard_version =
                     document.getElementById("standard_version").value;
+                data.default_criteria_version = document.getElementById(
+                    "default_criteria_version"
+                ).value;
 
                 const output = {
                     standard_name: data.standard_name,
                     standard_version: data.standard_version,
+                    default_criteria_version: data.default_criteria_version,
                     project_meta_schema: data.project_meta_schema,
                     test_standards: data.test_standards,
                 };
@@ -646,7 +754,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = "standard_config.json";
+                a.download = currentFilename || "standard_config.json";
                 a.click();
                 URL.revokeObjectURL(url);
             }
@@ -660,6 +768,7 @@
                     project_meta_schema: [],
                     test_standards: [],
                 };
+                currentFilename = ""; // Clear filename
                 document.getElementById("standard_name").value = "";
                 document.getElementById("standard_version").value = "";
                 document.getElementById("default_criteria_version").value =
@@ -667,7 +776,13 @@
                 renderSchemaTable();
                 renderSidebar();
                 clearEditor();
+                updateHeaderInfo(); // Update header after clearing
+                localStorage.removeItem(STORAGE_KEY); // Clear local storage
+                localStorage.removeItem(STORAGE_FILENAME_KEY); // Clear local storage filename
             }
+
+            // 初始化時嘗試讀取
+            window.addEventListener("DOMContentLoaded", loadFromLocalStorage);
 
             // ===== Schema Table =====
             let dragSrcIdx = null;
@@ -793,9 +908,31 @@
             }
 
             // ===== Sidebar =====
+            let isNewItem = false; // 標記是否為新增中的項目
+            let expandedSections = new Set(); // 記錄展開的章節 Index
+
+            function toggleSection(sIdx) {
+                const header = document.querySelector(
+                    `.section-header[data-section="${sIdx}"]`
+                );
+                const items = document.getElementById(`section-items-${sIdx}`);
+
+                header.classList.toggle("expanded");
+                items.classList.toggle("expanded");
+
+                if (header.classList.contains("expanded")) {
+                    expandedSections.add(sIdx);
+                } else {
+                    expandedSections.delete(sIdx);
+                }
+            }
+
             function renderSidebar() {
+                // 自動儲存目前的狀態 (包含剛匯入或修改的資料)
+                saveToLocalStorage();
+
                 const container = document.getElementById("sidebar-tree");
-                if (data.test_standards.length === 0) {
+                if (!data.test_standards || data.test_standards.length === 0) {
                     container.innerHTML =
                         '<div class="empty-state" style="padding:40px;"><div>尚無章節</div></div>';
                     return;
@@ -805,14 +942,18 @@
                     .map(
                         (sec, sIdx) => `
                 <div class="section-item">
-                    <div class="section-header" data-section="${sIdx}">
-                        <div class="section-info" onclick="toggleSection(${sIdx})">
+                    <div class="section-header ${
+                        expandedSections.has(sIdx) ? "expanded" : ""
+                    }" data-section="${sIdx}">
+                        <div class="section-info" onclick="toggleSection(${sIdx}); editSection(${sIdx});">
                             <span class="arrow">▶</span>
                             <span>${sec.section_id} ${sec.section_name}</span>
                         </div>
                         <button class="delete-btn" onclick="event.stopPropagation(); deleteSection(${sIdx})">刪除</button>
                     </div>
-                    <div class="section-items" id="section-items-${sIdx}">
+                    <div class="section-items ${
+                        expandedSections.has(sIdx) ? "expanded" : ""
+                    }" id="section-items-${sIdx}">
                         ${(sec.items || [])
                             .map(
                                 (item, iIdx) => `
@@ -830,15 +971,6 @@
                     .join("");
             }
 
-            function toggleSection(sIdx) {
-                const header = document.querySelector(
-                    `.section-header[data-section="${sIdx}"]`
-                );
-                const items = document.getElementById(`section-items-${sIdx}`);
-                header.classList.toggle("expanded");
-                items.classList.toggle("expanded");
-            }
-
             function addSection() {
                 const id = prompt("請輸入章節 ID（例：6）");
                 if (!id) return;
@@ -854,10 +986,125 @@
                 editSection(data.test_standards.length - 1);
             }
 
+            // 檢查是否有未儲存的變更或需要自動刪除
+            function checkUnsaved(nextActionCallback) {
+                // 如果是新項目且被判定為「空」(ID/Name為空)，直接刪除 (這部分邏輯保留)
+                if (currentEditType === "item" && isNewItem) {
+                    const id = document.getElementById("edit-item-id")?.value;
+                    const name =
+                        document.getElementById("edit-item-name")?.value;
+                    if (!id && !name) {
+                        data.test_standards[currentEditIndex].items.splice(
+                            currentEditItemIndex,
+                            1
+                        );
+                        renderSidebar();
+                        console.log("Empty new item auto-deleted");
+                        nextActionCallback();
+                        return;
+                    }
+                }
+
+                // 檢查是否有未儲存的文字變更
+                if (currentEditType) {
+                    const original = getOriginalData();
+                    const current = getCurrentFormData();
+
+                    if (JSON.stringify(original) !== JSON.stringify(current)) {
+                        if (!confirm("您有未儲存的變更，確定要離開嗎？")) {
+                            return; // 取消切換 (Stay)
+                        } else {
+                            // User chose to leave (Discard changes)
+                            // 如果是新項目，既然放棄儲存，就應該刪除它
+                            if (currentEditType === "item" && isNewItem) {
+                                data.test_standards[
+                                    currentEditIndex
+                                ].items.splice(currentEditItemIndex, 1);
+                                renderSidebar();
+                                console.log(
+                                    "Unsaved new item deleted on discard"
+                                );
+                            }
+                        }
+                    }
+                }
+
+                nextActionCallback();
+            }
+
+            // 取得目前表單資料 (用於比對)
+            function getCurrentFormData() {
+                if (currentEditType === "section") {
+                    return {
+                        id:
+                            document.getElementById("edit-section-id")?.value ||
+                            "",
+                        name:
+                            document.getElementById("edit-section-name")
+                                ?.value || "",
+                    };
+                } else if (currentEditType === "item") {
+                    return {
+                        id:
+                            document.getElementById("edit-item-id")?.value ||
+                            "",
+                        name:
+                            document.getElementById("edit-item-name")?.value ||
+                            "",
+                        uid:
+                            document.getElementById("edit-item-uid")?.value ||
+                            "",
+                        criteria_version:
+                            document.getElementById("edit-item-version")
+                                ?.value || "",
+                        purpose:
+                            document.getElementById("edit-purpose")?.value ||
+                            "",
+                        method:
+                            document.getElementById("edit-method")?.value || "",
+                        criteria:
+                            document.getElementById("edit-criteria")?.value ||
+                            "",
+                    };
+                }
+                return null;
+            }
+
+            // 取得原始資料 (用於比對)
+            function getOriginalData() {
+                if (currentEditType === "section") {
+                    const sec = data.test_standards[currentEditIndex];
+                    return { id: sec.section_id, name: sec.section_name };
+                } else if (currentEditType === "item") {
+                    const item =
+                        data.test_standards[currentEditIndex].items[
+                            currentEditItemIndex
+                        ];
+                    if (!item) return null; // item might be deleted
+                    return {
+                        id: item.id || "",
+                        name: item.name || "",
+                        uid: item.uid || "",
+                        criteria_version: item.criteria_version || "",
+                        purpose: item.narrative?.purpose || "",
+                        method: item.narrative?.method || "",
+                        criteria: item.narrative?.criteria || "",
+                    };
+                }
+                return null;
+            }
+
             function editSection(sIdx) {
+                checkUnsaved(() => {
+                    _doEditSection(sIdx);
+                });
+            }
+
+            function _doEditSection(sIdx) {
                 currentEditType = "section";
                 currentEditIndex = sIdx;
                 currentEditItemIndex = null;
+                isNewItem = false;
 
                 // 高亮
                 document
@@ -899,6 +1146,7 @@
                 data.test_standards[currentEditIndex].section_name =
                     document.getElementById("edit-section-name").value;
                 renderSidebar();
+                alert("已儲存！"); // 增加提示
             }
 
             function deleteSection(sIdx) {
@@ -910,28 +1158,41 @@
 
             // ===== Item Editor =====
             function addItem(sIdx) {
-                const defaultVersion =
-                    document.getElementById("default_criteria_version")
-                        ?.value || "MODA_v1.0";
-                data.test_standards[sIdx].items.push({
-                    id: "",
-                    name: "",
-                    uid: "",
-                    criteria_version: defaultVersion,
-                    targets: [],
-                    logic: "AND",
-                    narrative: { purpose: "", method: "", criteria: "" },
-                    handler: { class_name: "BaseTestTool" },
-                    checklist: [],
+                // 先檢查當前是否有未儲存
+                checkUnsaved(() => {
+                    const defaultVersion =
+                        document.getElementById("default_criteria_version")
+                            ?.value || "MODA_v1.0";
+                    data.test_standards[sIdx].items.push({
+                        id: "",
+                        name: "",
+                        uid: "",
+                        criteria_version: defaultVersion,
+                        targets: [],
+                        logic: "AND",
+                        narrative: { purpose: "", method: "", criteria: "" },
+                        handler: { class_name: "BaseTestTool" },
+                        checklist: [],
+                    });
+                    renderSidebar();
+
+                    // 設定新增標記
+                    const newIdx = data.test_standards[sIdx].items.length - 1;
+                    _doEditItem(sIdx, newIdx, true);
                 });
-                renderSidebar();
-                editItem(sIdx, data.test_standards[sIdx].items.length - 1);
             }
 
             function editItem(sIdx, iIdx) {
+                checkUnsaved(() => {
+                    _doEditItem(sIdx, iIdx, false);
+                });
+            }
+
+            function _doEditItem(sIdx, iIdx, isNew) {
                 currentEditType = "item";
                 currentEditIndex = sIdx;
                 currentEditItemIndex = iIdx;
+                isNewItem = isNew;
 
                 // 高亮
                 document
@@ -1108,6 +1369,16 @@
             function saveItem() {
                 if (currentEditType !== "item") return;
 
+                // 驗證測試對象
+                const isUAV =
+                    document.getElementById("edit-target-uav").checked;
+                const isGCS =
+                    document.getElementById("edit-target-gcs").checked;
+                if (!isUAV && !isGCS) {
+                    alert("請至少選擇一個測試對象 (UAV 或 GCS)！");
+                    return;
+                }
+
                 const item =
                     data.test_standards[currentEditIndex].items[
                         currentEditItemIndex
@@ -1126,10 +1397,8 @@
 
                 // Targets
                 item.targets = [];
-                if (document.getElementById("edit-target-uav").checked)
-                    item.targets.push("UAV");
-                if (document.getElementById("edit-target-gcs").checked)
-                    item.targets.push("GCS");
+                if (isUAV) item.targets.push("UAV");
+                if (isGCS) item.targets.push("GCS");
 
                 // Narrative
                 item.narrative = {
@@ -1184,8 +1453,8 @@
             }
 
             // ===== 初始化 =====
-            renderSchemaTable();
-            renderSidebar();
+            // renderSchemaTable(); // 由 loadFromLocalStorage 呼叫，避免覆寫 Storage
+            // renderSidebar();     // 由 loadFromLocalStorage 呼叫，避免覆寫 Storage
         </script>
     </body>
 </html>
