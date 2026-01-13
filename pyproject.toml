@@ -22,6 +22,7 @@ dependencies = [
     "pillow",
     "qrcode",
     "cve-bin-tool",
+    "flask",
 ]
 
 [tool.setuptools.packages.find]
