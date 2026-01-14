@@ -41,7 +41,7 @@ class CropTool(BaseTool):
 
     def on_activate(self):
         """啟用時設定"""
-        self._canvas.setCursor(Qt.ArrowCursor)
+        self._canvas.viewport().setCursor(Qt.ArrowCursor)
 
         # 預設選取整張圖片
         pixmap = self._canvas.get_pixmap()
@@ -55,7 +55,7 @@ class CropTool(BaseTool):
     def on_deactivate(self):
         """停用時清除"""
         self._clear_selection()
-        self._canvas.setCursor(Qt.ArrowCursor)
+        self._canvas.viewport().setCursor(Qt.ArrowCursor)
 
     def set_crop_rect(self, rect: QRectF):
         """設定剪裁範圍"""
@@ -216,18 +216,30 @@ class CropTool(BaseTool):
                 "l": Qt.SizeHorCursor,
                 "r": Qt.SizeHorCursor,
             }
-            self._canvas.setCursor(cursors.get(handle, Qt.ArrowCursor))
+            self._canvas.viewport().setCursor(cursors.get(handle, Qt.ArrowCursor))
         elif self._selection_rect and self._selection_rect.contains(scene_pos):
-            self._canvas.setCursor(Qt.SizeAllCursor)
+            self._canvas.viewport().setCursor(Qt.SizeAllCursor)
         else:
-            self._canvas.setCursor(Qt.CrossCursor)
+            self._canvas.viewport().setCursor(Qt.CrossCursor)
 
     def _hit_test_handles(self, scene_pos: QPointF) -> Optional[str]:
         """檢查是否碰到控制點"""
+        # 計算動態容差：控制點大小 + 基礎容差，並根據縮放調整
+        base_tolerance = self.HANDLE_SIZE / 2 + 5  # 螢幕像素
+        tolerance = base_tolerance
+
+        # 根據縮放因子調整容差（將螢幕像素轉換為場景座標）
+        views = self._canvas.scene().views() if self._canvas.scene() else []
+        if views:
+            zoom_factor = views[0].transform().m11()
+            if zoom_factor > 0:
+                tolerance = base_tolerance / zoom_factor
+
         for name, item in self._handles.items():
-            # 使用 mapFromScene 檢查更準確 (考慮 item 自身變換，雖然這裡是 RectItem)
-            local_pos = item.mapFromScene(scene_pos)
-            if item.contains(local_pos):
+            # 使用距離檢測而非 contains，更可靠
+            handle_center = item.pos()
+            distance = (scene_pos - handle_center).manhattanLength()
+            if distance <= tolerance:
                 return name
         return None
 

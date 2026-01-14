@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsScene,
     QGraphicsPixmapItem,
+    QGraphicsItem,
 )
 
 try:
@@ -72,6 +73,7 @@ class ImageCanvas(QGraphicsView):
         # 平移模式
         self._is_panning = False
         self._last_pan_pos = None
+        self._space_pressed = False  # 空白鍵按住狀態
 
         # 狀態標記
         self._is_in_crop_session = False
@@ -261,8 +263,13 @@ class ImageCanvas(QGraphicsView):
 
     def mousePressEvent(self, event: QMouseEvent):
         """滑鼠按下事件"""
-        # 中鍵或 Space + 左鍵 = 平移
+        # 中鍵 = 平移
         if event.button() == Qt.MiddleButton:
+            self._start_panning(event)
+            return
+
+        # 空白鍵 + 左鍵 = 平移
+        if event.button() == Qt.LeftButton and self._space_pressed:
             self._start_panning(event)
             return
 
@@ -271,6 +278,23 @@ class ImageCanvas(QGraphicsView):
             scene_pos = self.mapToScene(event.position().toPoint())
             self._current_tool.on_mouse_press(event, scene_pos)
             return
+
+        # 選取模式下（無工具）
+        if event.button() == Qt.LeftButton and self._current_tool is None:
+            # 使用視圖座標檢測物件（而非場景座標），以正確處理 ItemIgnoresTransformations
+            view_pos = event.position().toPoint()
+            item = self.itemAt(view_pos)
+
+            if item and item != self._pixmap_item:
+                # 讓 Qt 處理互動邏輯（選取、拖動控制點等）
+                super().mousePressEvent(event)
+                return
+            else:
+                # 點擊空白處，清除選取並開始平移
+                self._scene.clearSelection()
+                self._scene.update()  # 強制重繪場景以清除殘留的白線
+                self._start_panning(event)
+                return
 
         super().mousePressEvent(event)
 
@@ -299,7 +323,7 @@ class ImageCanvas(QGraphicsView):
     def mouseReleaseEvent(self, event: QMouseEvent):
         """滑鼠釋放事件"""
         # 結束平移
-        if event.button() == Qt.MiddleButton:
+        if self._is_panning and (event.button() == Qt.MiddleButton or event.button() == Qt.LeftButton):
             self._stop_panning()
             return
 
@@ -314,16 +338,19 @@ class ImageCanvas(QGraphicsView):
     def keyPressEvent(self, event: QKeyEvent):
         """鍵盤按下事件"""
         # Space = 進入平移模式
-        if event.key() == Qt.Key_Space and not self._is_panning:
-            self.setCursor(Qt.OpenHandCursor)
+        if event.key() == Qt.Key_Space and not event.isAutoRepeat():
+            self._space_pressed = True
+            self.viewport().setCursor(Qt.OpenHandCursor)
 
         super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event: QKeyEvent):
         """鍵盤釋放事件"""
         # 結束平移模式
-        if event.key() == Qt.Key_Space:
-            self.setCursor(Qt.ArrowCursor)
+        if event.key() == Qt.Key_Space and not event.isAutoRepeat():
+            self._space_pressed = False
+            if not self._is_panning:
+                self.viewport().setCursor(Qt.ArrowCursor)
 
         super().keyReleaseEvent(event)
 
@@ -331,19 +358,17 @@ class ImageCanvas(QGraphicsView):
         """開始平移"""
         self._is_panning = True
         self._last_pan_pos = event.position()
-        self.setCursor(Qt.ClosedHandCursor)
+        self.viewport().setCursor(Qt.ClosedHandCursor)
 
     def _stop_panning(self):
         """結束平移"""
         self._is_panning = False
         self._last_pan_pos = None
-        self.setCursor(Qt.ArrowCursor)
-
-    def _stop_panning(self):
-        """結束平移"""
-        self._is_panning = False
-        self._last_pan_pos = None
-        self.setCursor(Qt.ArrowCursor)
+        # 如果空白鍵還按著，顯示 OpenHand；否則恢復 Arrow
+        if self._space_pressed:
+            self.viewport().setCursor(Qt.OpenHandCursor)
+        else:
+            self.viewport().setCursor(Qt.ArrowCursor)
 
     # ===== 濾鏡功能 =====
 
@@ -578,21 +603,28 @@ class ImageCanvas(QGraphicsView):
         image = QImage(pixmap.size(), QImage.Format_ARGB32)
         image.fill(Qt.transparent)
 
-        # 暫時隱藏所有選取控制點
+        # 暫時隱藏所有選取控制點，並設定渲染模式
         from .tools.rect_tool import AnnotationRect, SelectionHandle
         hidden_items = []
+        annotation_rects = []
+
         for item in self._scene.items():
             if isinstance(item, SelectionHandle):
                 if item.isVisible():
                     hidden_items.append(item)
                     item.hide()
+            elif isinstance(item, AnnotationRect):
+                annotation_rects.append(item)
+                item._rendering = True
 
         painter = QPainter(image)
         self._scene.render(painter)
         painter.end()
 
-        # 恢復控制點的可見性
+        # 恢復控制點的可見性和渲染模式
         for item in hidden_items:
             item.show()
+        for item in annotation_rects:
+            item._rendering = False
 
         return image

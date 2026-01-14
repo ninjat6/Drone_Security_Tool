@@ -48,8 +48,8 @@ def main():
     app = QApplication(sys.argv)
 
     # 建立暫存圖片
-    image_path = "C:\\Users\\user\\Pictures\\pig.png"
-    output_path = "C:\\Users\\user\\Pictures\\pig_edit.png"
+    image_path = "C:\\Users\\wj582\\Desktop\\未命名的轉存\\DSCF8549.jpg"
+    output_path = "C:\\Users\\wj582\\Desktop\\未命名的轉存\\DSCF8549_edit.jpg"
     # create_dummy_image(image_path)
     print(f"Test image path: {os.path.abspath(image_path)}")
     print(f"Output path: {os.path.abspath(output_path)}")

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QGraphicsRectItem,
     QGraphicsItem,
     QGraphicsEllipseItem,
+    QGraphicsLineItem,
     QGraphicsSceneMouseEvent,
     QStyleOptionGraphicsItem,
     QStyle,
@@ -140,26 +141,54 @@ class AnnotationRect(QGraphicsRectItem):
         # 信號代理
         self.signals = AnnotationSignals()
 
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget):
-        # 覆寫 paint 以去除選取時的虛線框 (Qt 預設行為)
-        # 我們希望用 Handles 來表示選取，而不是醜醜的虛線
+        # 渲染標記（用於儲存時不繪製連接線）
+        self._rendering = False
 
-        # 移除 State_Selected 標記，暫時騙過 drawRect
-        # 但這樣會導致 Handles 不顯示? 不，Handles 可見性由我們控制
-        # 其實只需要將 option.state 的 Selected bit 去掉
+    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget):
+        # 移除 State_Selected 標記，避免 Qt 預設的選取虛線框
         option.state &= ~QStyle.State.State_Selected
         super().paint(painter, option, widget)
+
+        # 繪製旋轉連接線（只在選取時顯示，且不在渲染模式）
+        if self.isSelected() and not self._rendering and "t" in self._handles and "rotate" in self._handles:
+            # 取得兩個控制點的位置（在 Item 座標系中）
+            top_handle = self._handles["t"]
+            rotate_handle = self._handles["rotate"]
+
+            # 由於控制點使用 ItemIgnoresTransformations，我們需要直接使用它們的 pos()
+            top_pos = top_handle.pos()
+            rotate_pos = rotate_handle.pos()
+
+            # 繪製連接線
+            painter.save()
+            painter.setPen(QPen(Qt.white, 3))
+            painter.drawLine(top_pos, rotate_pos)
+            painter.restore()
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value):
         if change == QGraphicsItem.ItemSelectedChange:
             # 選取狀態改變，更新 Handles 顯示
             self._update_handles_visibility(selected=bool(value))
+        elif change == QGraphicsItem.ItemPositionHasChanged:
+            # 位置變更時觸發重繪，確保連接線正確
+            self.update()
         return super().itemChange(change, value)
 
     def setRect(self, rect: QRectF):
         """覆寫 setRect 以更新控制點位置"""
         super().setRect(rect)
         self._update_handle_positions()
+
+    def boundingRect(self) -> QRectF:
+        """覆寫 boundingRect 以包含旋轉控制點區域"""
+        rect = super().boundingRect()
+        if self.isSelected() and "rotate" in self._handles:
+            # 擴展 boundingRect 以包含旋轉控制點
+            rotate_pos = self._handles["rotate"].pos()
+            # 確保 boundingRect 包含旋轉控制點
+            if rotate_pos.y() < rect.top():
+                rect.setTop(rotate_pos.y() - 10)
+        return rect
 
     def _create_handles(self):
         directions = ["tl", "t", "tr", "r", "br", "b", "bl", "l", "rotate"]
@@ -172,27 +201,44 @@ class AnnotationRect(QGraphicsRectItem):
     def _update_handles_visibility(self, selected: bool = False):
         for handle in self._handles.values():
             handle.setVisible(selected)
+        # 連接線在 paint 中繪製，會自動跟隨選取狀態
 
     def _update_handle_positions(self):
         """更新所有控制點位置"""
         rect = self.rect()
         offset = 0  # 貼齊邊線
 
+        # 計算旋轉控制點的動態偏移距離
+        # 基礎距離為 50 像素（螢幕像素），需要根據縮放因子調整場景座標
+        rotate_offset = 50  # 基礎螢幕像素距離
+        if self.scene() and self.scene().views():
+            view = self.scene().views()[0]
+            # 取得視圖的縮放因子
+            zoom_factor = view.transform().m11()
+            if zoom_factor > 0:
+                # 將螢幕像素轉換為場景座標
+                rotate_offset = 50 / zoom_factor
+
+        top_center = QPointF(rect.center().x(), rect.top())
+        rotate_pos = QPointF(rect.center().x(), rect.top() - rotate_offset)
+
         pos_map = {
             "tl": rect.topLeft(),
-            "t": QPointF(rect.center().x(), rect.top()),
+            "t": top_center,
             "tr": rect.topRight(),
             "r": QPointF(rect.right(), rect.center().y()),
             "br": rect.bottomRight(),
             "b": QPointF(rect.center().x(), rect.bottom()),
             "bl": rect.bottomLeft(),
             "l": QPointF(rect.left(), rect.center().y()),
-            "rotate": QPointF(rect.center().x(), rect.top() - 30),  # 上方 30px
+            "rotate": rotate_pos,
         }
 
         for name, handle in self._handles.items():
             if name in pos_map:
                 handle.setPos(pos_map[name])
+
+        # 連接線在 paint 中繪製，不需要在這裡更新
 
         # 更新旋轉中心 (保持在中心)
         self.setTransformOriginPoint(rect.center())

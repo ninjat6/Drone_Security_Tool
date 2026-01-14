@@ -385,6 +385,13 @@ class ImageEditorDialog(QDialog):
         """縮放變更"""
         self._lbl_zoom.setText(f"{int(factor * 100)}%")
 
+        # 更新所有標註的控制點位置（因為旋轉控制點距離需要根據縮放調整）
+        scene = self._canvas.scene()
+        if scene:
+            for item in scene.items():
+                if isinstance(item, AnnotationRect):
+                    item._update_handle_positions()
+
     def _on_pick_color(self):
         """選擇顏色"""
         color = QColorDialog.getColor(self._current_color, self, "選擇顏色")
@@ -531,18 +538,20 @@ class ImageEditorDialog(QDialog):
         layout.setSpacing(15)
 
         # 確認按鈕
-        btn_confirm = QPushButton("✔")
+        btn_confirm = QPushButton("✓")
         btn_confirm.setFixedSize(30, 30)
-        btn_confirm.setStyleSheet("color: #4CAF50; border: 2px solid #4CAF50;")
+        btn_confirm.setStyleSheet("color: #4CAF50; border: 2px solid #4CAF50; font-weight: bold; font-size: 16px;")
         btn_confirm.setToolTip("確認剪裁")
+        btn_confirm.setCursor(Qt.PointingHandCursor)
         btn_confirm.clicked.connect(self._confirm_crop)
         layout.addWidget(btn_confirm)
 
         # 取消按鈕
-        btn_cancel = QPushButton("✘")
+        btn_cancel = QPushButton("✕")
         btn_cancel.setFixedSize(30, 30)
-        btn_cancel.setStyleSheet("color: #F44336; border: 2px solid #F44336;")
+        btn_cancel.setStyleSheet("color: #F44336; border: 2px solid #F44336; font-weight: bold; font-size: 16px;")
         btn_cancel.setToolTip("取消剪裁")
+        btn_cancel.setCursor(Qt.PointingHandCursor)
         btn_cancel.clicked.connect(self._cancel_crop)
         layout.addWidget(btn_cancel)
 
