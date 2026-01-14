@@ -578,8 +578,21 @@ class ImageCanvas(QGraphicsView):
         image = QImage(pixmap.size(), QImage.Format_ARGB32)
         image.fill(Qt.transparent)
 
+        # 暫時隱藏所有選取控制點
+        from .tools.rect_tool import AnnotationRect, SelectionHandle
+        hidden_items = []
+        for item in self._scene.items():
+            if isinstance(item, SelectionHandle):
+                if item.isVisible():
+                    hidden_items.append(item)
+                    item.hide()
+
         painter = QPainter(image)
         self._scene.render(painter)
         painter.end()
+
+        # 恢復控制點的可見性
+        for item in hidden_items:
+            item.show()
 
         return image
