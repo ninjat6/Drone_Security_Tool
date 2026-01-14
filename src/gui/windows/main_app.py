@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTabWidget,
     QScrollArea,
+    QFrame,
     QFileDialog,
     QMessageBox,
     QInputDialog,
@@ -70,7 +71,7 @@ class MainApp(BorderedMainWindow):
         self.config = self._get_initial_config()
 
         # 設定主視窗大小
-        self.resize(1400, 900)
+        self.resize(900, 850)
 
         # UI 初始化
         self.cw = QWidget()
@@ -159,6 +160,7 @@ class MainApp(BorderedMainWindow):
             v.addWidget(QLabel(f"<h3>{sec['section_name']}</h3>"))
             scr = QScrollArea()
             scr.setWidgetResizable(True)
+            scr.setFrameShape(QFrame.NoFrame)
             v.addWidget(scr)
             cont = QWidget()
             cv = QVBoxLayout(cont)
@@ -570,8 +572,8 @@ class MainApp(BorderedMainWindow):
             row.show()
 
             status_map = self.pm.get_test_status_detail(conf)
-            is_any = any(s != STATUS_NOT_TESTED for s in status_map.values())
-            if is_any:
+            is_all_tested = all(s != STATUS_NOT_TESTED for s in status_map.values())
+            if is_all_tested:
                 btn.setStyleSheet(
                     f"QPushButton {{ background-color: {COLOR_BTN_ACTIVE}; color: white; font-weight: bold; }}"
                 )
@@ -594,7 +596,7 @@ class MainApp(BorderedMainWindow):
                     tc = COLOR_TEXT_FAIL
                 elif s == "N/A":
                     c = COLOR_BG_NA
-                    tc = COLOR_TEXT_WHITE
+                    tc = COLOR_TEXT_GRAY
 
                 lbl.setStyleSheet(
                     f"background-color:{c}; color:{tc}; border-radius:4px; font-weight:bold;"

@@ -1010,9 +1010,23 @@ class ProjectManager(QObject):
         uid = item_config.get("uid", item_config.get("id"))
         targets = item_config.get("targets", [TARGET_GCS])
         saved = self.project_data.get("tests", {}).get(uid, {})
-        for t in targets:
-            if t not in saved:
+        
+        # 檢查是否為共用模式
+        meta = saved.get("__meta__", {})
+        is_shared = meta.get("is_shared", False)
+        
+        if is_shared and len(targets) > 1:
+            # 共用模式：只檢查 Shared 的結果
+            if "Shared" not in saved:
                 return False
-            if STATUS_UNCHECKED in saved[t].get("result", STATUS_UNCHECKED):
+            if STATUS_UNCHECKED in saved["Shared"].get("result", STATUS_UNCHECKED):
                 return False
-        return True
+            return True
+        else:
+            # 分開模式：檢查每個 target
+            for t in targets:
+                if t not in saved:
+                    return False
+                if STATUS_UNCHECKED in saved[t].get("result", STATUS_UNCHECKED):
+                    return False
+            return True
