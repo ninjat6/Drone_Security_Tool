@@ -4,7 +4,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hackrf-tools"  # 專案名稱 (只能用英文、數字、連字號)
+name = "UAV-Security-Tool"  # 專案名稱 (只能用英文、數字、連字號)
 version = "0.1.0"
 description = "無人機資安檢測工具"
 readme = "README.md"
