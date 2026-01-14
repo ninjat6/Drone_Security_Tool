@@ -192,7 +192,6 @@ class MainApp(BorderedMainWindow):
 
         self.update_font()
 
-
     def _init_menu(self):
         mb = self.menuBar()
 
@@ -203,21 +202,25 @@ class MainApp(BorderedMainWindow):
         self.a_edit = f_menu.addAction("編輯專案資訊", self.on_edit)
 
         t_menu = mb.addMenu("工具")
-        self.a_mobile = t_menu.addAction("📱 手機助手", self.on_mobile_helper)
+        self.a_mobile = t_menu.addAction("📱 手機上傳", self.on_mobile_helper)
         self.a_mobile.setEnabled(False)
         t_menu.addSeparator()
+
         t_menu.addAction("🔧 各別檢測模式 (Ad-Hoc)", self.on_adhoc)
+        self.a_merge = t_menu.addAction(
+            "📥 匯入各別檢測結果 (Merge Ad-Hoc)", self.on_merge
+        )
+
         t_menu.addSeparator()
         self.a_save_as_ver = t_menu.addAction(
             "🔄 另存專案為不同版本規範", self.on_save_as_new_version
         )
         self.a_save_as_ver.setEnabled(False)
         t_menu.addSeparator()
-        self.a_merge = t_menu.addAction(
-            "匯入各別檢測結果 (Merge Ad-Hoc)", self.on_merge
-        )
-        t_menu.addSeparator()
         t_menu.addAction("📋 規範 JSON 編輯器", self.on_standard_editor)
+
+        output_menu = mb.addMenu("輸出")
+        output_menu.addAction("📊 產生報告")
 
     def _init_zoom(self):
         self.shortcut_zoom_in = QShortcut(QKeySequence.ZoomIn, self)
@@ -513,7 +516,7 @@ class MainApp(BorderedMainWindow):
         if not self.pm.current_project_path:
             QMessageBox.warning(self, "警告", "請先開啟專案")
             return
-        
+
         if self.mobile_helper_win and self.mobile_helper_win.isVisible():
             self.mobile_helper_win.raise_()
             self.mobile_helper_win.activateWindow()
@@ -617,16 +620,16 @@ class MainApp(BorderedMainWindow):
 
     def open_test(self, item):
         uid = item.get("uid", item.get("id"))
-        
+
         # 檢查是否已有開啟的視窗
         if uid in self.test_windows:
             existing_win = self.test_windows[uid]
             # 確保視窗可見並激活
             existing_win.showNormal()  # 如果最小化則還原
-            existing_win.raise_()      # 提到最前面
+            existing_win.raise_()  # 提到最前面
             existing_win.activateWindow()  # 激活視窗
             return
-        
+
         # 建立新視窗（不設定 parent，讓視窗獨立於 MainApp 之上）
         win = BorderedMainWindow()
         win.setAttribute(Qt.WA_DeleteOnClose)
@@ -634,13 +637,13 @@ class MainApp(BorderedMainWindow):
         test_page = UniversalTestPage(item, self.pm)
         win.setCentralWidget(test_page)
         win.resize(1200, 800)
-        
+
         # 追蹤視窗
         self.test_windows[uid] = win
-        
+
         # 當視窗關閉時從追蹤字典中移除
         win.destroyed.connect(lambda: self.test_windows.pop(uid, None))
-        
+
         win.show()
 
     @Slot(str, str, str, str)
@@ -655,9 +658,9 @@ class MainApp(BorderedMainWindow):
     def on_standard_editor(self):
         """開啟規範 JSON 編輯器 (使用系統瀏覽器)"""
         import webbrowser
+
         html_path = os.path.join(
-            os.path.dirname(__file__),
-            "..", "infrastructure", "standard_editor.html"
+            os.path.dirname(__file__), "..", "infrastructure", "standard_editor.html"
         )
         html_path = os.path.abspath(html_path)
         webbrowser.open(f"file://{html_path}")
