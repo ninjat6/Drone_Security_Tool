@@ -44,6 +44,7 @@ from constants import (
     COLOR_TEXT_WHITE,
 )
 from core.project_manager import ProjectManager
+from core.report_generator import generate_report
 from dialogs.version_dialog import VersionSelectionDialog
 from dialogs.migration_dialog import MigrationReportDialog
 from dialogs.mobile_helper import MobileHelperDialog
@@ -220,7 +221,7 @@ class MainApp(BorderedMainWindow):
         t_menu.addAction("📋 規範 JSON 編輯器", self.on_standard_editor)
 
         output_menu = mb.addMenu("輸出")
-        output_menu.addAction("📊 產生報告")
+        output_menu.addAction("📊 產生報告", self.on_generate_report)
 
     def _init_zoom(self):
         self.shortcut_zoom_in = QShortcut(QKeySequence.ZoomIn, self)
@@ -524,6 +525,26 @@ class MainApp(BorderedMainWindow):
 
         self.mobile_helper_win = MobileHelperDialog(self, self.pm, self.config)
         self.mobile_helper_win.show()
+
+    def on_generate_report(self):
+        """產生檢測報告"""
+        if not self.pm.current_project_path:
+            QMessageBox.warning(self, "警告", "請先開啟專案")
+            return
+
+        try:
+            output_path = generate_report(self.pm, self.config)
+            QMessageBox.information(
+                self,
+                "報告產生成功",
+                f"報告已儲存至：\n{output_path}",
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "報告產生失敗",
+                f"產生報告時發生錯誤：\n{str(e)}",
+            )
 
     def project_ready(self):
         self._set_ui_locked(False)
