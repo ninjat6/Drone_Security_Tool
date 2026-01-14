@@ -47,6 +47,9 @@ class OverviewPage(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet(
+            "QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }"
+        )
         content_widget = QWidget()
         self.layout = QVBoxLayout(content_widget)
 
@@ -85,7 +88,6 @@ class OverviewPage(QWidget):
             self.photo_grid.addWidget(lbl_title, 0, col, 1, 1)
 
             # btn_mobile removed
-
 
             front_key = f"{t}_{PHOTO_ANGLES_ORDER[0]}"
             front_container = QWidget()
@@ -163,7 +165,7 @@ class OverviewPage(QWidget):
             else:
                 # 照片 Label
                 path_key = f"{key}_path"
-            
+
             rel_path = info_data.get(path_key)
             has_file = False
             full_path = ""
@@ -171,7 +173,7 @@ class OverviewPage(QWidget):
                 full_path = os.path.join(self.pm.current_project_path, rel_path)
                 if os.path.exists(full_path):
                     has_file = True
-            
+
             if key.endswith("_status"):
                 # 狀態圓點的更新邏輯
                 if has_file:
@@ -237,8 +239,6 @@ class OverviewPage(QWidget):
             w = QWidget()
             w.setLayout(h)
             self.prog_l.addWidget(w)
-
-
 
     def open_gallery(self, target):
         if not self.pm.current_project_path:
