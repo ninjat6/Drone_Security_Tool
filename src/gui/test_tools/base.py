@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from styles import Styles
 from widgets.attachment import AttachmentListWidget
+from widgets.image_editor import ImageEditorDialog
 from constants import (
     STATUS_PASS,
     STATUS_FAIL,
@@ -100,6 +101,7 @@ class BaseTestToolView(QWidget):
         self.checks: Dict[str, QCheckBox] = {}
         self.attachment_list = None
         self.result_combo = None
+        self.pm = None  # ProjectManager 參考
         self._init_ui()
 
     def _build_attachment_section(self, layout: QVBoxLayout):
@@ -119,6 +121,9 @@ class BaseTestToolView(QWidget):
         self.attachment_list.setMinimumHeight(100)
         # 移除 setMaximumHeight 限制，讓列表可以延伸
         v_file.addWidget(self.attachment_list, stretch=1)
+
+        # 連接圖片編輯信號
+        self.attachment_list.on_image_edit.connect(self._open_image_editor)
 
         g_file.setLayout(v_file)
         layout.addWidget(g_file, stretch=1)  # 讓整個 GroupBox 延伸填滿空間
@@ -366,6 +371,19 @@ class BaseTestToolView(QWidget):
         if self.user_note.toPlainText() != text:
             self.user_note.setPlainText(text)
 
+    def set_project_manager(self, pm):
+        """設定 ProjectManager"""
+        self.pm = pm
+        if self.attachment_list:
+            self.attachment_list.set_project_manager(pm)
+
+    def _open_image_editor(self, image_path: str, widget):
+        """開啟圖片編輯器"""
+        dialog = ImageEditorDialog(image_path, parent=self, project_manager=self.pm)
+        if dialog.exec():
+            # 編輯完成，重新載入縮圖
+            widget.refresh_thumbnail()
+
 
 # ==============================================================================
 # Tool 類別 (邏輯 + 控制層)
@@ -390,7 +408,13 @@ class BaseTestTool(QObject):
     save_completed = Signal(bool, str)
 
     def __init__(
-        self, config, result_data, target, project_manager=None, save_callback=None, is_shared=False
+        self,
+        config,
+        result_data,
+        target,
+        project_manager=None,
+        save_callback=None,
+        is_shared=False,
     ):
         super().__init__()
         self.config = config
@@ -400,10 +424,10 @@ class BaseTestTool(QObject):
         self.save_cb = save_callback
         self.logic = config.get("logic", "AND").upper()
         self.item_uid = config.get("uid", config.get("id"))
-        self.item_id = config.get("id", "")      # 檢測項目 ID (6.2.1)
+        self.item_id = config.get("id", "")  # 檢測項目 ID (6.2.1)
         self.item_name = config.get("name", "")  # 檢測項目名稱 (身分鑑別)
         self.targets = config.get("targets", [])  # 目標列表 ["UAV", "GCS"]
-        self.is_shared = is_shared               # 是否為共用模式
+        self.is_shared = is_shared  # 是否為共用模式
 
         # 內容對照 (用於產生失敗原因)
         self.item_content_map = {}
@@ -413,9 +437,9 @@ class BaseTestTool(QObject):
         # 建立 View
         self.view = self._create_view(config)
 
-        # 設定 attachment_list 的 ProjectManager 參考
-        if self.view.attachment_list and self.pm:
-            self.view.attachment_list.set_project_manager(self.pm)
+        # 設定 View 的 ProjectManager 參考
+        if self.pm:
+            self.view.set_project_manager(self.pm)
 
         # 綁定 View 事件
         self.view.check_changed.connect(self._on_check_changed)
@@ -504,14 +528,18 @@ class BaseTestTool(QObject):
         if STATUS_PASS in status:
             # 通過：列出所有符合的項目
             if checked_list:
-                items_text = "\n".join(
-                    f"  - {r}" for r in checked_list
-                )
+                items_text = "\n".join(f"  - {r}" for r in checked_list)
                 pass_reason = f"【判定結果】通過\n\n符合項目：\n{items_text}"
             else:
                 pass_reason = "【判定結果】通過\n\n符合規範要求。"
             # 只有備註為空或是系統自動產生的才更新
-            if not current_note or current_note.startswith("【判定結果】") or current_note.startswith("符合規範") or current_note.startswith("未通過") or current_note.startswith("不適用"):
+            if (
+                not current_note
+                or current_note.startswith("【判定結果】")
+                or current_note.startswith("符合規範")
+                or current_note.startswith("未通過")
+                or current_note.startswith("不適用")
+            ):
                 self.view.set_note(pass_reason)
 
         elif STATUS_FAIL in status:
@@ -530,7 +558,14 @@ class BaseTestTool(QObject):
                 parts.append(f"未符合項目：\n{items_text}")
             fail_note = "\n\n".join(parts)
 
-            if not current_note or current_note.startswith("【判定結果】") or current_note.startswith("符合規範") or current_note.startswith("未通過") or current_note.startswith("已符合") or current_note.startswith("不適用"):
+            if (
+                not current_note
+                or current_note.startswith("【判定結果】")
+                or current_note.startswith("符合規範")
+                or current_note.startswith("未通過")
+                or current_note.startswith("已符合")
+                or current_note.startswith("不適用")
+            ):
                 self.view.set_note(fail_note)
 
         elif STATUS_NA in status:
@@ -619,18 +654,18 @@ class BaseTestTool(QObject):
             self.save_cb(final_data)
         else:
             self.pm.update_test_result(self.item_uid, self.target, final_data)
-            
+
             # 儲存成功後，執行延遲刪除（將待刪除檔案移到 trash）
             if self.view.attachment_list:
                 self.view.attachment_list.flush_pending_trash()
 
             # 刷新 UI：重新載入資料以確保介面與儲存結果一致 (例如 timestamp, 檔名)
             saved_data = self.pm.get_test_result(self.item_uid, self.target)
-            
+
             # 必須先清空附件列表，避免重複添加
             if self.view.attachment_list:
                 self.view.attachment_list.clear()
-            
+
             self.load_data(saved_data)
 
             QMessageBox.information(self.view, "成功", "已儲存")
@@ -669,10 +704,10 @@ class BaseTestTool(QObject):
             for f_path in files:
                 ext = os.path.splitext(f_path)[1].lower()
                 ftype = "img" if ext in img_exts else "file"
-                
+
                 # 使用原檔名 (去除副檔名) 作為標題
                 title = os.path.splitext(os.path.basename(f_path))[0]
-                
+
                 # 使用新的 import_attachment 方法（支援多目標）
                 rel_path = self.pm.import_attachment(
                     f_path,
@@ -687,9 +722,9 @@ class BaseTestTool(QObject):
                 if rel_path:
                     full_path = os.path.join(self.pm.current_project_path, rel_path)
                     display_type = "image" if ftype == "img" else "file"
-                    self.view.attachment_list.add_attachment(full_path, title, display_type)
-
-
+                    self.view.attachment_list.add_attachment(
+                        full_path, title, display_type
+                    )
 
     def _on_photo_received(self, item_uid, target, path, title):
         """接收手機照片"""

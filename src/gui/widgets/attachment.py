@@ -19,12 +19,14 @@ from PySide6.QtWidgets import (
 
 from styles import Styles
 from .aspect_label import AspectLabel
+from .image_editor.editor_dialog import ImageEditorDialog
 
 
 class AttachmentItemWidget(QWidget):
     """附件項目元件"""
 
     on_delete = Signal(QWidget)
+    on_image_click = Signal(str)  # 圖片點擊信號，傳送檔案路徑
 
     def __init__(
         self, file_path, title="", file_type="image", row_height=90, extra_data=None
@@ -34,7 +36,7 @@ class AttachmentItemWidget(QWidget):
         self.file_type = file_type
         self.row_height = row_height
         self.extra_data = extra_data or {}  # 額外欄位 (e.g. command)
-        
+
         # 追蹤原始標題（用於判斷是否需要重命名檔案）
         self._original_title = title
 
@@ -66,14 +68,16 @@ class AttachmentItemWidget(QWidget):
             pix = QPixmap(self.file_path)
             if not pix.isNull():
                 self.lbl_icon.setPixmap(pix)
+                # 設定游標和工具提示
+                self.lbl_icon.setCursor(Qt.PointingHandCursor)
+                self.lbl_icon.setToolTip("點擊編輯圖片")
             else:
                 self.lbl_icon.setText("Error")
         else:
             self.lbl_icon.setText(self.file_type)
-        # if self.file_type == "file" and os.path.exists(self.file_path):
-        #     self.lbl_icon.setText("file")
-        # if self.file_type == "log" and not os.path.exists(self.file_path):
-        #     self.lbl_icon.setText("file")
+
+        # 連接點擊事件
+        self.lbl_icon.mousePressEvent = self._on_icon_click
 
         layout.addWidget(self.lbl_icon)
 
@@ -111,6 +115,18 @@ class AttachmentItemWidget(QWidget):
         # 更新 tooltip
         self.edit_title.setToolTip(f"檔案: {os.path.basename(new_path)}")
 
+    def _on_icon_click(self, event):
+        """圖片縮圖點擊事件"""
+        if self.file_type == "image" and os.path.exists(self.file_path):
+            self.on_image_click.emit(self.file_path)
+
+    def refresh_thumbnail(self):
+        """重新載入縮圖（編輯後呼叫）"""
+        if self.file_type == "image" and os.path.exists(self.file_path):
+            pix = QPixmap(self.file_path)
+            if not pix.isNull():
+                self.lbl_icon.setPixmap(pix)
+
     def get_data(self):
         data = {
             "type": self.file_type,
@@ -125,6 +141,9 @@ class AttachmentItemWidget(QWidget):
 class AttachmentListWidget(QListWidget):
     """支援拖曳排序且高度自適應的列表元件"""
 
+    # 圖片編輯信號，傳送 (檔案路徑, widget)
+    on_image_edit = Signal(str, QWidget)
+
     def __init__(self):
         super().__init__()
         self.setDragDropMode(QListWidget.InternalMove)
@@ -135,10 +154,10 @@ class AttachmentListWidget(QListWidget):
 
         # 一列高度 (包含圖片和多行文字的最大高度)
         self.row_height = 40
-        
+
         # ProjectManager 參考 (用於 move_to_trash)
         self.pm = None
-        
+
         # 待刪除檔案列表（延遲刪除：儲存時才真正移動）
         self.pending_trash = []
 
@@ -160,6 +179,9 @@ class AttachmentListWidget(QListWidget):
         item.setSizeHint(QSize(widget.sizeHint().width(), self.row_height))
 
         widget.on_delete.connect(self.remove_attachment_row)
+        widget.on_image_click.connect(
+            lambda path, w=widget: self._open_image_editor(path, w)
+        )
 
     def add_attachment_with_extra(
         self, file_path, title="", file_type="image", extra_data=None
@@ -178,6 +200,9 @@ class AttachmentListWidget(QListWidget):
         self.setItemWidget(item, widget)
         item.setSizeHint(QSize(widget.sizeHint().width(), self.row_height))
         widget.on_delete.connect(self.remove_attachment_row)
+        widget.on_image_click.connect(
+            lambda path, w=widget: self._open_image_editor(path, w)
+        )
 
     def remove_attachment_row(self, widget):
         """移除附件列（延遲刪除：只從 UI 移除，儲存時才移動檔案）"""
@@ -185,9 +210,9 @@ class AttachmentListWidget(QListWidget):
             item = self.item(i)
             if self.itemWidget(item) == widget:
                 # 將檔案路徑加入待刪除列表（延遲刪除）
-                if hasattr(widget, 'file_path') and widget.file_path:
+                if hasattr(widget, "file_path") and widget.file_path:
                     self.pending_trash.append(widget.file_path)
-                
+
                 self.takeItem(i)
                 break
 
@@ -199,10 +224,10 @@ class AttachmentListWidget(QListWidget):
         if not self.pm:
             self.pending_trash.clear()
             return
-        
+
         for file_path in self.pending_trash:
             self.pm.move_to_trash(file_path)
-        
+
         self.pending_trash.clear()
 
     def clear_pending_trash(self):
@@ -216,20 +241,25 @@ class AttachmentListWidget(QListWidget):
         """
         if not self.pm:
             return
-        
+
         for i in range(self.count()):
             item = self.item(i)
             widget = self.itemWidget(item)
-            if widget and hasattr(widget, 'is_title_changed') and widget.is_title_changed():
+            if (
+                widget
+                and hasattr(widget, "is_title_changed")
+                and widget.is_title_changed()
+            ):
                 new_title = widget.get_current_title()
                 old_path = widget.file_path
-                
+
                 # 呼叫 ProjectManager 重命名檔案
                 new_path = self.pm.rename_attachment(old_path, new_title)
                 if new_path:
                     widget.update_file_path(new_path)
 
     def get_all_attachments(self) -> list:
+        """取得所有附件資料"""
         results = []
         for i in range(self.count()):
             item = self.item(i)
@@ -238,4 +268,22 @@ class AttachmentListWidget(QListWidget):
                 results.append(widget.get_data())
         return results
 
+    def _open_image_editor(self, image_path: str, widget: AttachmentItemWidget):
+        """開啟圖片編輯器"""
+        if not os.path.exists(image_path):
+            return
 
+        # 建立編輯器對話框
+        # 傳入 self.pm (ProjectManager) 以支援自動備份至 rawdatas
+        dialog = ImageEditorDialog(
+            image_path=image_path,
+            project_manager=self.pm,
+            parent=self.window() if self.window() else self,
+        )
+
+        if dialog.exec():
+            # 編輯完成，刷新縮圖
+            widget.refresh_thumbnail()
+
+            # 如果還是需要通知外部 (例如 main_app 可能有其他邏輯)，可以保留發送
+            # self.on_image_edit.emit(image_path, widget)
