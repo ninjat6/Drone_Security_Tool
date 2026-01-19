@@ -323,7 +323,9 @@ class ImageCanvas(QGraphicsView):
     def mouseReleaseEvent(self, event: QMouseEvent):
         """滑鼠釋放事件"""
         # 結束平移
-        if self._is_panning and (event.button() == Qt.MiddleButton or event.button() == Qt.LeftButton):
+        if self._is_panning and (
+            event.button() == Qt.MiddleButton or event.button() == Qt.LeftButton
+        ):
             self._stop_panning()
             return
 
@@ -591,7 +593,7 @@ class ImageCanvas(QGraphicsView):
 
     def render_to_image(self) -> QImage:
         """
-        將場景渲染為圖片（包含所有標註）
+        將場景渲染為圖片（包含所有標註，但不包含剪裁與選取 UI）
 
         Returns:
             QImage 物件
@@ -603,14 +605,33 @@ class ImageCanvas(QGraphicsView):
         image = QImage(pixmap.size(), QImage.Format_ARGB32)
         image.fill(Qt.transparent)
 
-        # 暫時隱藏所有選取控制點，並設定渲染模式
+        # 暫時隱藏所有選取控制點、剪裁 UI
         from .tools.rect_tool import AnnotationRect, SelectionHandle
+        from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsEllipseItem
+
         hidden_items = []
         annotation_rects = []
 
         for item in self._scene.items():
+            # 隱藏框選工具的控制點
             if isinstance(item, SelectionHandle):
                 if item.isVisible():
+                    hidden_items.append(item)
+                    item.hide()
+            # 隱藏剪裁工具的控制點 (圓形) 與遮罩/選取框 (矩形，但不是標註)
+            elif isinstance(item, QGraphicsEllipseItem) and not isinstance(
+                item, SelectionHandle
+            ):
+                # 剪裁工具的控制點 (非 AnnotationRect 的子物件)
+                if item.parentItem() is None and item.isVisible():
+                    hidden_items.append(item)
+                    item.hide()
+            elif isinstance(item, QGraphicsRectItem) and not isinstance(
+                item, AnnotationRect
+            ):
+                # 剪裁工具的選取框或遮罩 (非 AnnotationRect)
+                # 也排除 pixmap item
+                if item != self._pixmap_item and item.isVisible():
                     hidden_items.append(item)
                     item.hide()
             elif isinstance(item, AnnotationRect):
