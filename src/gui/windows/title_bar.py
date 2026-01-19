@@ -30,16 +30,29 @@ class CustomTitleBar(QWidget):
         # 按鈕 Layout
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 8, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(0)
         layout.addStretch()
 
-        self.btn_min = QPushButton("─")
-        self.btn_max = QPushButton("□")
-        self.btn_close = QPushButton("✕")
+        # 視窗控制按鈕 (使用 SVG 圖示)
+        import os
+        from PySide6.QtGui import QIcon
+        from PySide6.QtCore import QSize
+
+        icons_dir = os.path.join(os.path.dirname(__file__), "..", "resources", "icons")
+
+        self.btn_min = QPushButton()
+        self.btn_max = QPushButton()
+        self.btn_close = QPushButton()
+
+        self.btn_min.setIcon(QIcon(os.path.join(icons_dir, "Minimize.svg")))
+        self.btn_max.setIcon(QIcon(os.path.join(icons_dir, "Maximize.svg")))
+        self.btn_close.setIcon(QIcon(os.path.join(icons_dir, "Close.svg")))
+
         self.buttons = [self.btn_min, self.btn_max, self.btn_close]
 
         for b in self.buttons:
-            b.setFixedSize(36, 36)
+            b.setFixedSize(32, 32)
+            b.setIconSize(QSize(16, 16))
 
         self.btn_min.clicked.connect(parent_window.showMinimized)
         self.btn_max.clicked.connect(parent_window.toggle_maximize)
