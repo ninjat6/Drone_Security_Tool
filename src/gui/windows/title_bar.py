@@ -42,7 +42,7 @@ class CustomTitleBar(QWidget):
 
         # 應用程式圖標 (最左側) - 使用 QSvgRenderer 高品質渲染，支援高 DPI
         self.app_icon_label = QLabel(self)
-        app_icon_path = os.path.join(icons_dir, "UAV_Security_Tool_icon_v3.svg")
+        app_icon_path = os.path.join(icons_dir, "UAV_Security_Tool_icon_v4.svg")
 
         # 取得螢幕 DPI 縮放比例
         from PySide6.QtWidgets import QApplication

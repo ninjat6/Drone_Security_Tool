@@ -84,7 +84,7 @@ class MainApp(BorderedMainWindow):
             "..",
             "resources",
             "icons",
-            "UAV_Security_Tool_icon_v3.svg",
+            "UAV_Security_Tool_icon_v4.svg",
         )
         icon = QIcon(icon_path)
         # 設定較大的可用尺寸以確保清晰度
