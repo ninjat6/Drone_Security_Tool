@@ -29,16 +29,46 @@ class CustomTitleBar(QWidget):
 
         # 按鈕 Layout
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 8, 0)
+        layout.setContentsMargins(8, 0, 8, 0)
         layout.setSpacing(0)
-        layout.addStretch()
 
         # 視窗控制按鈕 (使用 SVG 圖示)
         import os
-        from PySide6.QtGui import QIcon
+        from PySide6.QtGui import QIcon, QPixmap, QPainter
         from PySide6.QtCore import QSize
+        from PySide6.QtSvg import QSvgRenderer
 
         icons_dir = os.path.join(os.path.dirname(__file__), "..", "resources", "icons")
+
+        # 應用程式圖標 (最左側) - 使用 QSvgRenderer 高品質渲染，支援高 DPI
+        self.app_icon_label = QLabel(self)
+        app_icon_path = os.path.join(icons_dir, "UAV_Security_Tool_icon_v3.svg")
+
+        # 取得螢幕 DPI 縮放比例
+        from PySide6.QtWidgets import QApplication
+
+        device_pixel_ratio = QApplication.primaryScreen().devicePixelRatio()
+        icon_size = 24
+        render_size = int(icon_size * device_pixel_ratio)
+
+        svg_renderer = QSvgRenderer(app_icon_path)
+        app_icon_pixmap = QPixmap(render_size, render_size)
+        app_icon_pixmap.fill(Qt.transparent)
+        painter = QPainter(app_icon_pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        svg_renderer.render(painter)
+        painter.end()
+        app_icon_pixmap.setDevicePixelRatio(device_pixel_ratio)
+
+        self.app_icon_label.setPixmap(app_icon_pixmap)
+        self.app_icon_label.setFixedSize(28, 28)
+        self.app_icon_label.setAlignment(Qt.AlignCenter)
+        self.app_icon_label.setStyleSheet("background: transparent;")
+        layout.addWidget(self.app_icon_label)
+        layout.addSpacing(4)
+
+        layout.addStretch()
 
         self.btn_min = QPushButton()
         self.btn_max = QPushButton()

@@ -74,6 +74,25 @@ class MainApp(BorderedMainWindow):
         # 設定主視窗大小
         self.resize(900, 850)
 
+        # 設定應用程式圖標
+        import os
+        from PySide6.QtGui import QIcon
+        from PySide6.QtCore import QSize
+
+        icon_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "resources",
+            "icons",
+            "UAV_Security_Tool_icon_v3.svg",
+        )
+        icon = QIcon(icon_path)
+        # 設定較大的可用尺寸以確保清晰度
+        icon.addFile(icon_path, QSize(64, 64))
+        icon.addFile(icon_path, QSize(128, 128))
+        icon.addFile(icon_path, QSize(256, 256))
+        self.setWindowIcon(icon)
+
         # UI 初始化
         self.cw = QWidget()
         self.setCentralWidget(self.cw)
