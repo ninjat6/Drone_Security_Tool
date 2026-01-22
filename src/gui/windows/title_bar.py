@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from styles import Styles
+from gui.constants import ICON_PATH, CLOSE_ICON_PATH, MAXIMIZE_ICON_PATH, MINIMIZE_ICON_PATH 
 
 
 class CustomTitleBar(QWidget):
@@ -38,11 +39,8 @@ class CustomTitleBar(QWidget):
         from PySide6.QtCore import QSize
         from PySide6.QtSvg import QSvgRenderer
 
-        icons_dir = os.path.join(os.path.dirname(__file__), "..", "resources", "icons")
-
         # 應用程式圖標 (最左側) - 使用 QSvgRenderer 高品質渲染，支援高 DPI
         self.app_icon_label = QLabel(self)
-        app_icon_path = os.path.join(icons_dir, "UAV_Security_Tool_icon_v4.svg")
 
         # 取得螢幕 DPI 縮放比例
         from PySide6.QtWidgets import QApplication
@@ -51,7 +49,7 @@ class CustomTitleBar(QWidget):
         icon_size = 24
         render_size = int(icon_size * device_pixel_ratio)
 
-        svg_renderer = QSvgRenderer(app_icon_path)
+        svg_renderer = QSvgRenderer(ICON_PATH)
         app_icon_pixmap = QPixmap(render_size, render_size)
         app_icon_pixmap.fill(Qt.transparent)
         painter = QPainter(app_icon_pixmap)
@@ -74,9 +72,9 @@ class CustomTitleBar(QWidget):
         self.btn_max = QPushButton()
         self.btn_close = QPushButton()
 
-        self.btn_min.setIcon(QIcon(os.path.join(icons_dir, "Minimize.svg")))
-        self.btn_max.setIcon(QIcon(os.path.join(icons_dir, "Maximize.svg")))
-        self.btn_close.setIcon(QIcon(os.path.join(icons_dir, "Close.svg")))
+        self.btn_min.setIcon(QIcon(MINIMIZE_ICON_PATH))
+        self.btn_max.setIcon(QIcon(MAXIMIZE_ICON_PATH))
+        self.btn_close.setIcon(QIcon(CLOSE_ICON_PATH))
 
         self.buttons = [self.btn_min, self.btn_max, self.btn_close]
 

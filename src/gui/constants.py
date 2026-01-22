@@ -10,6 +10,18 @@ import os
 # ==============================================================================
 
 CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
+
+
+ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "icons")
+
+ICON_PATH = os.path.join(ICON_DIR, "UAV_Security_Tool_icon_v4.svg")
+CLOSE_ICON_PATH = os.path.join(ICON_DIR, "Close.svg")
+MAXIMIZE_ICON_PATH = os.path.join(ICON_DIR, "Maximize.svg")
+MINIMIZE_ICON_PATH = os.path.join(ICON_DIR, "Minimize.svg")
+
+
+
+
 PROJECT_SETTINGS_FILENAME = "project_settings.json"
 DIR_IMAGES = "images"
 DIR_REPORTS = "reports"
@@ -112,3 +124,7 @@ PHOTO_ANGLES_NAME = {
     "top": "上方 (Top)",
     "bottom": "下方 (Bottom)",
 }
+
+
+if __name__ == "__main__":
+    print(os.path.exists(ICON_DIR))

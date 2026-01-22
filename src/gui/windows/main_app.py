@@ -27,22 +27,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtCore import QUrl
 
-from constants import (
-    PROJECT_TYPE_FULL,
-    PROJECT_TYPE_ADHOC,
-    DEFAULT_DESKTOP_PATH,
-    STATUS_NOT_TESTED,
-    TARGETS,
-    COLOR_BTN_ACTIVE,
-    COLOR_BG_DEFAULT,
-    COLOR_BG_PASS,
-    COLOR_BG_FAIL,
-    COLOR_BG_NA,
-    COLOR_TEXT_GRAY,
-    COLOR_TEXT_PASS,
-    COLOR_TEXT_FAIL,
-    COLOR_TEXT_WHITE,
-)
+from constants import *
 from core.project_manager import ProjectManager
 from core.report_generator import generate_report
 from dialogs.version_dialog import VersionSelectionDialog
@@ -79,18 +64,11 @@ class MainApp(BorderedMainWindow):
         from PySide6.QtGui import QIcon
         from PySide6.QtCore import QSize
 
-        icon_path = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "resources",
-            "icons",
-            "UAV_Security_Tool_icon_v4.svg",
-        )
-        icon = QIcon(icon_path)
+        icon = QIcon(ICON_PATH)
         # 設定較大的可用尺寸以確保清晰度
-        icon.addFile(icon_path, QSize(64, 64))
-        icon.addFile(icon_path, QSize(128, 128))
-        icon.addFile(icon_path, QSize(256, 256))
+        icon.addFile(ICON_PATH, QSize(64, 64))
+        icon.addFile(ICON_PATH, QSize(128, 128))
+        icon.addFile(ICON_PATH, QSize(256, 256))
         self.setWindowIcon(icon)
 
         # UI 初始化
