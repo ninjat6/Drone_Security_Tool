@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QWidget,
+    QScrollArea,
+    QFrame,
 )
 
 from constants import DEFAULT_DESKTOP_PATH, DATE_FMT_QT
@@ -40,7 +42,18 @@ class ProjectFormController:
     def _init_ui(self):
         # 取得 BorderedDialog 的內容區域佈局
         layout = self.dialog.contentWidget().layout()
-        form = QFormLayout()
+        
+        # 建立滾動區域
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # 建立表單容器
+        form_container = QWidget()
+        form = QFormLayout(form_container)
+        form.setContentsMargins(10, 10, 10, 10)
         desktop = DEFAULT_DESKTOP_PATH
 
         for field in self.meta_schema:
@@ -124,7 +137,9 @@ class ProjectFormController:
                 form.addRow(label, widget)
                 self.inputs[key] = {"w": widget, "t": f_type}
 
-        layout.addLayout(form)
+        # 將表單容器放入滾動區域
+        scroll.setWidget(form_container)
+        layout.addWidget(scroll)
 
         btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         btns.accepted.connect(self.dialog.accept)
