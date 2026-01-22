@@ -208,8 +208,8 @@ class MainApp(BorderedMainWindow):
                 self.test_ui_elements[uid] = (btn, st_l, item, row)
 
             cv.addStretch()
-            self.tabs.addTab(p, sec["section_id"])
-
+            # 顯示 id + name
+            self.tabs.addTab(p, f"{sec['section_id']} {sec['section_name']}")
         self.update_font()
 
     def _init_menu(self):
@@ -654,8 +654,9 @@ class MainApp(BorderedMainWindow):
             sec_id = sec["section_id"]
             is_visible = self.pm.is_section_visible(sec_id)
             self.tabs.setTabEnabled(t_idx, is_visible)
+            sec_title = f"{sec['section_id']} {sec['section_name']}"
             self.tabs.setTabText(
-                t_idx, sec["section_name"] + (" (未啟用)" if not is_visible else "")
+                t_idx, sec_title + (" (未啟用)" if not is_visible else "")
             )
 
     def open_test(self, item):

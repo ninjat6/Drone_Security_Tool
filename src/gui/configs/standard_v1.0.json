@@ -89,7 +89,7 @@
     "test_standards": [
         {
             "section_id": "6",
-            "section_name": "6.系統檢測",
+            "section_name": "系統檢測",
             "items": [
                 {
                     "id": "6.2.1",
@@ -293,12 +293,12 @@
         },
         {
             "section_id": "7",
-            "section_name": "7.群飛系統資安檢測",
+            "section_name": "群飛系統資安檢測",
             "items": []
         },
         {
             "section_id": "8.1",
-            "section_name": "8.1.一般要求增項",
+            "section_name": "一般要求增項",
             "items": [
                 {
                     "id": "8.1.1",
@@ -453,7 +453,7 @@
         },
         {
             "section_id": "8.2",
-            "section_name": "8.2.特殊安全要求增項",
+            "section_name": "特殊安全要求增項",
             "items": [
                 {
                     "id": "8.2.1",

@@ -104,7 +104,7 @@ class ProjectFormController:
                         opts.append(
                             {
                                 "value": sec["section_id"],
-                                "label": sec["section_name"],
+                                "label": f"{sec['section_id']} {sec['section_name']}",
                             }
                         )
                 else:
