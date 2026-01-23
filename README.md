@@ -136,3 +136,11 @@ sudo apt install libxcb-cursor0
 ```
 pip install --upgrade pip
 ```
+
+### 要把原作者更新同步到你的 repo
+
+```
+git fetch upstream
+git merge upstream/main
+git push
+```
