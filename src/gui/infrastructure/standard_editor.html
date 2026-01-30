@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
     <head>
         <meta charset="UTF-8" />
@@ -11,8 +11,9 @@
                 box-sizing: border-box;
             }
             body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                    Roboto, sans-serif;
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
                 background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
                 color: #e0e0e0;
                 min-height: 100vh;
@@ -178,6 +179,53 @@
                 background: #1a1a2e;
                 color: #e0e0e0;
             }
+
+            /* Schema Group Styles */
+            .schema-group {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                margin-bottom: 20px;
+                overflow: hidden;
+            }
+            .schema-group-header {
+                background: rgba(255, 255, 255, 0.05);
+                padding: 12px 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .schema-group-header input {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 4px;
+                padding: 6px 10px;
+                color: #fff;
+                font-size: 1rem;
+                font-weight: 500;
+                flex: 1;
+                max-width: 300px;
+            }
+            .schema-group-header input:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+            .schema-group-header .group-actions {
+                display: flex;
+                gap: 8px;
+            }
+            .schema-group-body {
+                padding: 15px;
+            }
+            .schema-group.dragging {
+                opacity: 0.4;
+                background: rgba(102, 126, 234, 0.2);
+            }
+            .schema-group.drag-over {
+                border: 2px dashed #667eea;
+            }
+
             /* Drag handle */
             .drag-handle {
                 cursor: grab;
@@ -193,11 +241,50 @@
                 opacity: 0.4;
                 background: rgba(102, 126, 234, 0.2);
             }
-            .schema-table tr.drag-over {
-                border-top: 2px solid #667eea;
+            /* drag-over removed to avoid double visual indicators */
+            .schema-table tr.drag-placeholder {
+                background: rgba(102, 126, 234, 0.3);
+                border: 2px dashed #667eea;
+            }
+            .schema-table tr.drag-placeholder td {
+                background: rgba(102, 126, 234, 0.1);
+            }
+            .drag-ghost {
+                position: fixed;
+                pointer-events: none;
+                z-index: 9999;
+                opacity: 0.8;
+                background: #2d3748;
+                border: 1px solid #4a5568;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                border-radius: 4px;
+                display: table; /* Maintain table layout */
+                width: auto;
+            }
+            .drag-ghost td {
+                padding: 8px; /* Match table cell padding */
+                border-bottom: none;
+            }
+            /* Ensure inputs in ghost element maintain styles */
+            .drag-ghost input,
+            .drag-ghost select {
+                width: 100%;
+                padding: 6px 8px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 4px;
+                background: rgba(
+                    255,
+                    255,
+                    255,
+                    0.05
+                ); /* Match .schema-table input */
+                color: #fff;
+                font-size: 0.9rem;
             }
             .schema-table tbody tr {
-                transition: transform 0.15s ease, opacity 0.15s ease;
+                transition:
+                    transform 0.15s ease,
+                    opacity 0.15s ease;
             }
 
             /* Tab 3: Two Column Layout */
@@ -460,7 +547,10 @@
                         type="text"
                         id="standard_name"
                         placeholder="例：遙控無人機資安檢測規範_v1.0"
-                        oninput="data.standard_name = this.value; updateHeaderInfo();"
+                        oninput="
+                            data.standard_name = this.value;
+                            updateHeaderInfo();
+                        "
                     />
                 </div>
                 <div class="form-group">
@@ -485,32 +575,28 @@
         <!-- Tab 2: 專案欄位 -->
         <div id="tab-schema" class="tab-content">
             <div class="form-container">
-                <h2>專案欄位設定 (project_meta_schema)</h2>
-                <p style="color: #888; margin-bottom: 20px">
-                    定義建立專案時需要填寫的欄位
-                </p>
-
-                <table class="schema-table" id="schema-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 40px"></th>
-                            <th style="width: 150px">Key</th>
-                            <th style="width: 150px">Label</th>
-                            <th style="width: 140px">Type</th>
-                            <th style="width: 60px">必填</th>
-                            <th style="width: 80px">顯示總覽</th>
-                            <th style="width: 60px"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="schema-body"></tbody>
-                </table>
-                <button
-                    class="btn btn-secondary"
-                    style="margin-top: 15px"
-                    onclick="addSchemaField()"
+                <div
+                    style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                    "
                 >
-                    + 新增欄位
-                </button>
+                    <div>
+                        <h2 style="margin: 0">
+                            專案欄位設定 (project_meta_schema)
+                        </h2>
+                        <p style="color: #888; margin: 5px 0 0 0">
+                            定義建立專案時需要填寫的欄位，欄位會依群組分類顯示
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" onclick="addSchemaGroup()">
+                        + 新增群組
+                    </button>
+                </div>
+
+                <div id="schema-groups-container"></div>
             </div>
         </div>
 
@@ -619,9 +705,9 @@
                                         `位置: ${e.at || "未知"}\n` +
                                         `前 50 字元: ${content.substring(
                                             0,
-                                            50
+                                            50,
                                         )}\n` +
-                                        `長度: ${content.length}`
+                                        `長度: ${content.length}`,
                                 );
                                 return;
                             }
@@ -675,7 +761,7 @@
                     if (currentFilename) {
                         localStorage.setItem(
                             STORAGE_FILENAME_KEY,
-                            currentFilename
+                            currentFilename,
                         );
                     }
                 } catch (e) {
@@ -714,7 +800,7 @@
                             document.getElementById("standard_version").value =
                                 data.standard_version;
                             const verEl = document.getElementById(
-                                "default_criteria_version"
+                                "default_criteria_version",
                             );
                             if (verEl)
                                 verEl.value = data.default_criteria_version;
@@ -731,13 +817,43 @@
             }
 
             function exportJSON() {
+                // 驗證 project_meta_schema
+                const errors = [];
+                data.project_meta_schema.forEach((group, gIdx) => {
+                    if (!group.group_label || !group.group_label.trim()) {
+                        errors.push(`群組 ${gIdx + 1}：群組名稱未填寫`);
+                    }
+                    if (!group.fields || group.fields.length === 0) {
+                        errors.push(
+                            `群組「${group.group_label || "未命名"}」：群組內沒有任何欄位`,
+                        );
+                    }
+                    (group.fields || []).forEach((field, fIdx) => {
+                        if (!field.key || !field.key.trim()) {
+                            errors.push(
+                                `群組「${group.group_label || "未命名"}」欄位 ${fIdx + 1}：Key 未填寫`,
+                            );
+                        }
+                        if (!field.label || !field.label.trim()) {
+                            errors.push(
+                                `群組「${group.group_label || "未命名"}」欄位 ${fIdx + 1}：Label 未填寫`,
+                            );
+                        }
+                    });
+                });
+
+                if (errors.length > 0) {
+                    alert("請檢查以下欄位：\n\n" + errors.join("\n"));
+                    return;
+                }
+
                 // 收集資料
                 data.standard_name =
                     document.getElementById("standard_name").value;
                 data.standard_version =
                     document.getElementById("standard_version").value;
                 data.default_criteria_version = document.getElementById(
-                    "default_criteria_version"
+                    "default_criteria_version",
                 ).value;
 
                 const output = {
@@ -784,127 +900,521 @@
             // 初始化時嘗試讀取
             window.addEventListener("DOMContentLoaded", loadFromLocalStorage);
 
-            // ===== Schema Table =====
-            let dragSrcIdx = null;
+            // ===== Schema Groups =====
+            let dragSrcGroupIdx = null;
+            let dragSrcFieldIdx = null;
 
             function renderSchemaTable() {
-                const tbody = document.getElementById("schema-body");
-                tbody.innerHTML = data.project_meta_schema
+                const container = document.getElementById(
+                    "schema-groups-container",
+                );
+
+                if (
+                    !data.project_meta_schema ||
+                    data.project_meta_schema.length === 0
+                ) {
+                    container.innerHTML =
+                        '<div class="empty-state" style="padding:40px;"><div>尚無群組，點擊「+ 新增群組」開始</div></div>';
+                    return;
+                }
+
+                container.innerHTML = data.project_meta_schema
                     .map(
-                        (field, idx) => `
-                <tr draggable="true" data-idx="${idx}">
-                    <td><span class="drag-handle">☰</span></td>
-                    <td><input type="text" value="${
-                        field.key || ""
-                    }" onchange="updateSchemaField(${idx}, 'key', this.value)"></td>
-                    <td><input type="text" value="${
-                        field.label || ""
-                    }" onchange="updateSchemaField(${idx}, 'label', this.value)"></td>
-                    <td>
-                        <select onchange="updateSchemaField(${idx}, 'type', this.value)">
-                            <option value="text" ${
-                                field.type === "text" ? "selected" : ""
-                            }>text</option>
-                            <option value="date" ${
-                                field.type === "date" ? "selected" : ""
-                            }>date</option>
-                            <option value="path_selector" ${
-                                field.type === "path_selector" ? "selected" : ""
-                            }>path_selector</option>
-                            <option value="checkbox_group" ${
-                                field.type === "checkbox_group"
-                                    ? "selected"
-                                    : ""
-                            }>checkbox_group</option>
-                            <option value="hidden" ${
-                                field.type === "hidden" ? "selected" : ""
-                            }>hidden</option>
-                        </select>
-                    </td>
-                    <td><input type="checkbox" ${
-                        field.required ? "checked" : ""
-                    } onchange="updateSchemaField(${idx}, 'required', this.checked)"></td>
-                    <td><input type="checkbox" ${
-                        field.show_in_overview ? "checked" : ""
-                    } onchange="updateSchemaField(${idx}, 'show_in_overview', this.checked)"></td>
-                    <td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeSchemaField(${idx})">×</button></td>
-                </tr>
-            `
+                        (group, gIdx) => `
+                    <div class="schema-group" data-group-idx="${gIdx}">
+                        <div class="schema-group-header">
+                            <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                                <div style="display:flex; flex-direction:column; gap:2px;">
+                                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.7rem;" 
+                                            onclick="moveSchemaGroup(${gIdx}, -1)" ${gIdx === 0 ? "disabled" : ""}>▲</button>
+                                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.7rem;" 
+                                            onclick="moveSchemaGroup(${gIdx}, 1)" ${gIdx === data.project_meta_schema.length - 1 ? "disabled" : ""}>▼</button>
+                                </div>
+                                <input type="text" value="${group.group_label || ""}" 
+                                       placeholder="群組名稱 (必填)" 
+                                       style="${!group.group_label ? "border-color:#e74c3c;" : ""}"
+                                       onchange="updateSchemaGroup(${gIdx}, 'group_label', this.value); this.style.borderColor = this.value.trim() ? '' : '#e74c3c';">
+                            </div>
+                            <div class="group-actions">
+                                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" 
+                                        onclick="addFieldToGroup(${gIdx})">+ 欄位</button>
+                                <button class="btn btn-danger" style="padding:4px 8px;" 
+                                        onclick="removeSchemaGroup(${gIdx})">×</button>
+                            </div>
+                        </div>
+                        <div class="schema-group-body">
+                            <table class="schema-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px"></th>
+                                        <th style="width: 130px">Key</th>
+                                        <th style="width: 130px">Label</th>
+                                        <th style="width: 120px">Type</th>
+                                        <th style="width: 50px">必填</th>
+                                        <th style="width: 60px">總覽</th>
+                                        <th style="width: 50px">備註</th>
+                                        <th style="width: 40px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${(group.fields || [])
+                                        .map(
+                                            (field, fIdx) => `
+                                        <tr data-group-idx="${gIdx}" data-field-idx="${fIdx}">
+                                            <td><span class="drag-handle" data-group-idx="${gIdx}" data-field-idx="${fIdx}">☰</span></td>
+                                            <td><input type="text" value="${field.key || ""}" 
+                                                       style="${!field.key ? "border-color:#e74c3c;" : ""}"
+                                                       placeholder="必填"
+                                                       onchange="updateSchemaField(${gIdx}, ${fIdx}, 'key', this.value); this.style.borderColor = this.value.trim() ? '' : '#e74c3c';"></td>
+                                            <td><input type="text" value="${field.label || ""}" 
+                                                       style="${!field.label ? "border-color:#e74c3c;" : ""}"
+                                                       placeholder="必填"
+                                                       onchange="updateSchemaField(${gIdx}, ${fIdx}, 'label', this.value); this.style.borderColor = this.value.trim() ? '' : '#e74c3c';"></td>
+                                            <td>
+                                                <select onchange="updateSchemaField(${gIdx}, ${fIdx}, 'type', this.value)">
+                                                    <option value="text" ${field.type === "text" ? "selected" : ""}>text</option>
+                                                    <option value="textarea" ${field.type === "textarea" ? "selected" : ""}>textarea</option>
+                                                    <option value="date" ${field.type === "date" ? "selected" : ""}>date</option>
+                                                    <option value="path_selector" ${field.type === "path_selector" ? "selected" : ""}>path_selector</option>
+                                                    <option value="checkbox_group" ${field.type === "checkbox_group" ? "selected" : ""}>checkbox_group</option>
+                                                    <option value="hidden" ${field.type === "hidden" ? "selected" : ""}>hidden</option>
+                                                </select>
+                                            </td>
+                                            <td><input type="checkbox" ${field.required ? "checked" : ""} 
+                                                       onchange="updateSchemaField(${gIdx}, ${fIdx}, 'required', this.checked)"></td>
+                                            <td><input type="checkbox" ${field.show_in_overview ? "checked" : ""} 
+                                                       onchange="updateSchemaField(${gIdx}, ${fIdx}, 'show_in_overview', this.checked)"></td>
+                                            <td><input type="checkbox" ${field.remark ? "checked" : ""} 
+                                                       onchange="updateSchemaField(${gIdx}, ${fIdx}, 'remark', this.checked)"></td>
+                                            <td><button class="btn btn-danger" style="padding:4px 8px;" 
+                                                        onclick="removeSchemaField(${gIdx}, ${fIdx})">×</button></td>
+                                        </tr>
+                                    `,
+                                        )
+                                        .join("")}
+                                </tbody>
+                            </table>
+                            ${(group.fields || []).length === 0 ? `<div class="empty-group-drop" data-group-idx="${gIdx}" style="color:#666; padding:20px; text-align:center; border:2px dashed rgba(255,255,255,0.2); border-radius:4px;">拖曳欄位至此</div>` : ""}
+                        </div>
+                    </div>
+                `,
                     )
                     .join("");
 
-                // Add drag event listeners
-                const rows = tbody.querySelectorAll("tr");
-                rows.forEach((row) => {
-                    row.addEventListener("dragstart", handleDragStart);
-                    row.addEventListener("dragend", handleDragEnd);
-                    row.addEventListener("dragover", handleDragOver);
-                    row.addEventListener("dragenter", handleDragEnter);
-                    row.addEventListener("dragleave", handleDragLeave);
-                    row.addEventListener("drop", handleDrop);
+                // Add custom drag listeners for drag handles
+                container.querySelectorAll(".drag-handle").forEach((handle) => {
+                    handle.addEventListener("mousedown", handleCustomDragStart);
                 });
+
+                // Add drop listeners for empty groups
+                container
+                    .querySelectorAll(".empty-group-drop")
+                    .forEach((dropZone) => {
+                        dropZone.addEventListener("dragover", (e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                            dropZone.style.borderColor = "#667eea";
+                            dropZone.style.background =
+                                "rgba(102, 126, 234, 0.1)";
+                        });
+                        dropZone.addEventListener("dragleave", (e) => {
+                            dropZone.style.borderColor =
+                                "rgba(255,255,255,0.2)";
+                            dropZone.style.background = "transparent";
+                        });
+                        dropZone.addEventListener("drop", (e) => {
+                            e.preventDefault();
+                            const targetGroupIdx = parseInt(
+                                dropZone.dataset.groupIdx,
+                            );
+                            dropZone.style.borderColor =
+                                "rgba(255,255,255,0.2)";
+                            dropZone.style.background = "transparent";
+
+                            if (
+                                dragSrcGroupIdx !== null &&
+                                dragSrcFieldIdx !== null
+                            ) {
+                                const item = data.project_meta_schema[
+                                    dragSrcGroupIdx
+                                ].fields.splice(dragSrcFieldIdx, 1)[0];
+                                if (
+                                    !data.project_meta_schema[targetGroupIdx]
+                                        .fields
+                                ) {
+                                    data.project_meta_schema[
+                                        targetGroupIdx
+                                    ].fields = [];
+                                }
+                                data.project_meta_schema[
+                                    targetGroupIdx
+                                ].fields.push(item);
+                                renderSchemaTable();
+                                saveToLocalStorage();
+                            }
+                            dragSrcGroupIdx = null;
+                            dragSrcFieldIdx = null;
+                        });
+                    });
             }
 
-            function handleDragStart(e) {
-                dragSrcIdx = parseInt(e.currentTarget.dataset.idx);
+            // Custom drag-and-drop implementation for fields
+            let draggedRow = null;
+            let placeholder = null;
+            let dragGhost = null;
+            let ghostOffsetX = 0;
+            let ghostOffsetY = 0;
+
+            function handleCustomDragStart(e) {
+                if (e.button !== 0) return; // Only left click
+                e.preventDefault(); // Prevent default browser drag behavior
+
+                const handle = e.currentTarget;
+                draggedRow = handle.closest("tr");
+                if (!draggedRow) return;
+
+                dragSrcGroupIdx = parseInt(draggedRow.dataset.groupIdx);
+                dragSrcFieldIdx = parseInt(draggedRow.dataset.fieldIdx);
+
+                draggedRow.classList.add("dragging");
+
+                // Create ghost element
+                dragGhost = draggedRow.cloneNode(true);
+                dragGhost.classList.add("drag-ghost");
+                dragGhost.style.width = draggedRow.offsetWidth + "px";
+
+                // Copy computed styles for cells to maintain appearance
+                const originalCells = draggedRow.querySelectorAll("td");
+                const ghostCells = dragGhost.querySelectorAll("td");
+                originalCells.forEach((cell, index) => {
+                    if (ghostCells[index]) {
+                        ghostCells[index].style.width = cell.offsetWidth + "px";
+                    }
+                });
+
+                // Calculate offset to position ghost relative to cursor
+                const rect = draggedRow.getBoundingClientRect();
+                ghostOffsetX = e.clientX - rect.left;
+                ghostOffsetY = e.clientY - rect.top;
+
+                dragGhost.style.left = e.clientX - ghostOffsetX + "px";
+                dragGhost.style.top = e.clientY - ghostOffsetY + "px";
+
+                document.body.appendChild(dragGhost);
+
+                // Create a placeholder
+                placeholder = document.createElement("tr");
+                placeholder.classList.add("drag-placeholder");
+                placeholder.style.height = draggedRow.offsetHeight + "px";
+                placeholder.innerHTML = `<td colspan="8"></td>`; // Span all columns
+
+                draggedRow.parentNode.insertBefore(
+                    placeholder,
+                    draggedRow.nextSibling,
+                );
+
+                document.addEventListener("mousemove", handleCustomDragMove);
+                document.addEventListener("mouseup", handleCustomDragEnd);
+            }
+
+            function handleCustomDragMove(e) {
+                if (!draggedRow) return;
+
+                // Move ghost element
+                if (dragGhost) {
+                    dragGhost.style.left = e.clientX - ghostOffsetX + "px";
+                    dragGhost.style.top = e.clientY - ghostOffsetY + "px";
+                }
+
+                // Hide original row, show placeholder
+                draggedRow.style.display = "none";
+                placeholder.style.display = "table-row";
+
+                // Find the schema group under cursor
+                const elementsUnderCursor = document.elementsFromPoint(
+                    e.clientX,
+                    e.clientY,
+                );
+                let targetGroup = null;
+
+                for (const el of elementsUnderCursor) {
+                    // Check if element is valid
+                    if (!el) continue;
+
+                    // Ignore ghost and dragged items
+                    if (
+                        el === dragGhost ||
+                        el.contains(dragGhost) ||
+                        el === draggedRow
+                    )
+                        continue;
+
+                    if (el.classList && el.classList.contains("schema-group")) {
+                        targetGroup = el;
+                        break;
+                    }
+                    // Also check closest parent
+                    const group = el.closest
+                        ? el.closest(".schema-group")
+                        : null;
+                    if (group) {
+                        targetGroup = group;
+                        break;
+                    }
+                }
+
+                // Clear styling for empty drops
+                document.querySelectorAll(".empty-group-drop").forEach((el) => {
+                    el.style.borderColor = "rgba(255,255,255,0.2)";
+                    el.style.background = "transparent";
+                });
+
+                if (!targetGroup) return;
+
+                const tbody = targetGroup.querySelector(".schema-table tbody");
+                const emptyDropMsg =
+                    targetGroup.querySelector(".empty-group-drop");
+
+                if (!tbody) return;
+
+                // Get all valid rows in the target group
+                const rows = Array.from(tbody.querySelectorAll("tr")).filter(
+                    (r) =>
+                        r !== draggedRow &&
+                        r !== placeholder &&
+                        r !== dragGhost &&
+                        r.style.display !== "none",
+                );
+
+                if (rows.length === 0) {
+                    // Empty group logic: Highlight drop zone and append placeholder
+                    if (emptyDropMsg) {
+                        emptyDropMsg.style.borderColor = "#667eea";
+                        emptyDropMsg.style.background =
+                            "rgba(102, 126, 234, 0.1)";
+                    }
+                    tbody.appendChild(placeholder);
+                } else {
+                    // Find closest row logic
+                    let closestRow = null;
+                    let minDistance = Infinity;
+                    let insertAfter = false;
+
+                    rows.forEach((row) => {
+                        const box = row.getBoundingClientRect();
+                        const centerY = box.top + box.height / 2;
+                        const dist = Math.abs(e.clientY - centerY);
+
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            closestRow = row;
+                            insertAfter = e.clientY > centerY;
+                        }
+                    });
+
+                    if (closestRow) {
+                        if (insertAfter) {
+                            closestRow.parentNode.insertBefore(
+                                placeholder,
+                                closestRow.nextSibling,
+                            );
+                        } else {
+                            closestRow.parentNode.insertBefore(
+                                placeholder,
+                                closestRow,
+                            );
+                        }
+                    } else {
+                        // Should rare happen if rows > 0, but safest fallback
+                        tbody.appendChild(placeholder);
+                    }
+                }
+            }
+
+            function handleCustomDragEnd(e) {
+                document.removeEventListener("mousemove", handleCustomDragMove);
+                document.removeEventListener("mouseup", handleCustomDragEnd);
+                document.body.style.cursor = "";
+
+                if (dragGhost && dragGhost.parentNode) {
+                    dragGhost.parentNode.removeChild(dragGhost);
+                    dragGhost = null;
+                }
+
+                if (!draggedRow) return;
+
+                draggedRow.classList.remove("dragging");
+                draggedRow.style.display = "table-row"; // Show the original row again
+
+                // Clear styling (drag-over removed)
+                document.querySelectorAll(".empty-group-drop").forEach((el) => {
+                    el.style.borderColor = "rgba(255,255,255,0.2)";
+                    el.style.background = "transparent";
+                });
+
+                if (placeholder && placeholder.parentNode) {
+                    const newParentTbody = placeholder.parentNode;
+                    const newGroup = newParentTbody.closest(".schema-group");
+                    const newGroupIdx = parseInt(newGroup.dataset.groupIdx);
+                    const newFieldIdx = Array.from(
+                        newParentTbody.children,
+                    ).indexOf(placeholder);
+
+                    // Perform the data update
+                    if (
+                        dragSrcGroupIdx !== null &&
+                        dragSrcFieldIdx !== null &&
+                        newGroupIdx !== null &&
+                        newFieldIdx !== -1
+                    ) {
+                        const item = data.project_meta_schema[
+                            dragSrcGroupIdx
+                        ].fields.splice(dragSrcFieldIdx, 1)[0];
+
+                        if (!data.project_meta_schema[newGroupIdx].fields) {
+                            data.project_meta_schema[newGroupIdx].fields = [];
+                        }
+                        data.project_meta_schema[newGroupIdx].fields.splice(
+                            newFieldIdx,
+                            0,
+                            item,
+                        );
+                        saveToLocalStorage();
+                    }
+                    placeholder.parentNode.removeChild(placeholder);
+                }
+
+                draggedRow = null;
+                placeholder = null;
+                dragSrcGroupIdx = null;
+                dragSrcFieldIdx = null;
+                renderSchemaTable(); // Re-render to update indices and UI
+            }
+
+            // The following native drag-and-drop functions are no longer used for fields,
+            // but are kept for reference or if other elements still use them.
+            function handleFieldDragStart(e) {
+                // This function is now replaced by handleCustomDragStart for drag handles
+                // If you intend to use native drag-and-drop for the entire row,
+                // you would attach this to the 'dragstart' event of the <tr>.
+                // For now, it's effectively unused for field dragging.
+                dragSrcGroupIdx = parseInt(e.currentTarget.dataset.groupIdx);
+                dragSrcFieldIdx = parseInt(e.currentTarget.dataset.fieldIdx);
                 e.currentTarget.classList.add("dragging");
                 e.dataTransfer.effectAllowed = "move";
             }
 
-            function handleDragEnd(e) {
+            function handleFieldDragEnd(e) {
                 e.currentTarget.classList.remove("dragging");
                 document.querySelectorAll(".schema-table tr").forEach((row) => {
                     row.classList.remove("drag-over");
                 });
             }
 
-            function handleDragOver(e) {
+            function handleFieldDragOver(e) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
             }
 
-            function handleDragEnter(e) {
+            function handleFieldDragEnter(e) {
                 e.currentTarget.classList.add("drag-over");
             }
 
-            function handleDragLeave(e) {
+            function handleFieldDragLeave(e) {
                 e.currentTarget.classList.remove("drag-over");
             }
 
-            function handleDrop(e) {
+            function handleFieldDrop(e) {
                 e.preventDefault();
-                const targetIdx = parseInt(e.currentTarget.dataset.idx);
+
+                const targetGroupIdx = parseInt(
+                    e.currentTarget.dataset.groupIdx,
+                );
+                const targetFieldIdx = parseInt(
+                    e.currentTarget.dataset.fieldIdx,
+                );
                 e.currentTarget.classList.remove("drag-over");
 
-                if (dragSrcIdx !== null && dragSrcIdx !== targetIdx) {
-                    const item = data.project_meta_schema.splice(
-                        dragSrcIdx,
-                        1
-                    )[0];
-                    data.project_meta_schema.splice(targetIdx, 0, item);
-                    renderSchemaTable();
+                if (dragSrcGroupIdx !== null && dragSrcFieldIdx !== null) {
+                    // 允許跨群組移動欄位
+                    if (
+                        dragSrcGroupIdx !== targetGroupIdx ||
+                        dragSrcFieldIdx !== targetFieldIdx
+                    ) {
+                        const item = data.project_meta_schema[
+                            dragSrcGroupIdx
+                        ].fields.splice(dragSrcFieldIdx, 1)[0];
+                        data.project_meta_schema[targetGroupIdx].fields.splice(
+                            targetFieldIdx,
+                            0,
+                            item,
+                        );
+                        renderSchemaTable();
+                        saveToLocalStorage();
+                    }
                 }
-                dragSrcIdx = null;
+                dragSrcGroupIdx = null;
+                dragSrcFieldIdx = null;
             }
 
-            function addSchemaField() {
-                data.project_meta_schema.push({
+            // ===== Group Move =====
+            function moveSchemaGroup(gIdx, direction) {
+                const newIdx = gIdx + direction;
+                if (newIdx < 0 || newIdx >= data.project_meta_schema.length)
+                    return;
+
+                const item = data.project_meta_schema.splice(gIdx, 1)[0];
+                data.project_meta_schema.splice(newIdx, 0, item);
+                renderSchemaTable();
+                saveToLocalStorage();
+            }
+
+            function addSchemaGroup() {
+                data.project_meta_schema.unshift({
+                    group_label: "",
+                    fields: [],
+                });
+                renderSchemaTable();
+                saveToLocalStorage();
+            }
+
+            function updateSchemaGroup(gIdx, key, value) {
+                data.project_meta_schema[gIdx][key] = value;
+                saveToLocalStorage();
+            }
+
+            function removeSchemaGroup(gIdx) {
+                if (!confirm("確定要刪除此群組及其所有欄位嗎？")) return;
+                data.project_meta_schema.splice(gIdx, 1);
+                renderSchemaTable();
+                saveToLocalStorage();
+            }
+
+            function addFieldToGroup(gIdx) {
+                if (!data.project_meta_schema[gIdx].fields) {
+                    data.project_meta_schema[gIdx].fields = [];
+                }
+                data.project_meta_schema[gIdx].fields.push({
                     key: "",
                     label: "",
                     type: "text",
                     required: false,
                     show_in_overview: false,
+                    remark: false,
                 });
                 renderSchemaTable();
+                saveToLocalStorage();
             }
 
-            function updateSchemaField(idx, key, value) {
-                data.project_meta_schema[idx][key] = value;
+            function updateSchemaField(gIdx, fIdx, key, value) {
+                data.project_meta_schema[gIdx].fields[fIdx][key] = value;
+                saveToLocalStorage();
             }
 
-            function removeSchemaField(idx) {
-                data.project_meta_schema.splice(idx, 1);
+            function removeSchemaField(gIdx, fIdx) {
+                data.project_meta_schema[gIdx].fields.splice(fIdx, 1);
                 renderSchemaTable();
+                saveToLocalStorage();
             }
 
             // ===== Sidebar =====
@@ -913,7 +1423,7 @@
 
             function toggleSection(sIdx) {
                 const header = document.querySelector(
-                    `.section-header[data-section="${sIdx}"]`
+                    `.section-header[data-section="${sIdx}"]`,
                 );
                 const items = document.getElementById(`section-items-${sIdx}`);
 
@@ -960,13 +1470,13 @@
                             <div class="item-entry" onclick="editItem(${sIdx}, ${iIdx})" data-section="${sIdx}" data-item="${iIdx}">
                                 ${item.id} ${item.name}
                             </div>
-                        `
+                        `,
                             )
                             .join("")}
                         <div class="item-entry" style="color:#667eea;" onclick="addItem(${sIdx})">+ 新增測項</div>
                     </div>
                 </div>
-            `
+            `,
                     )
                     .join("");
             }
@@ -996,7 +1506,7 @@
                     if (!id && !name) {
                         data.test_standards[currentEditIndex].items.splice(
                             currentEditItemIndex,
-                            1
+                            1,
                         );
                         renderSidebar();
                         console.log("Empty new item auto-deleted");
@@ -1022,7 +1532,7 @@
                                 ].items.splice(currentEditItemIndex, 1);
                                 renderSidebar();
                                 console.log(
-                                    "Unsaved new item deleted on discard"
+                                    "Unsaved new item deleted on discard",
                                 );
                             }
                         }
@@ -1203,7 +1713,7 @@
                     .forEach((e) => e.classList.remove("active"));
                 document
                     .querySelector(
-                        `.item-entry[data-section="${sIdx}"][data-item="${iIdx}"]`
+                        `.item-entry[data-section="${sIdx}"][data-item="${iIdx}"]`,
                     )
                     ?.classList.add("active");
 
@@ -1360,7 +1870,7 @@
                     <div class="checklist-item"><span class="id">c${
                         idx + 1
                     }</span>${item}</div>
-                `
+                `,
                         )
                         .join("");
                 }
@@ -1433,7 +1943,7 @@
                 if (!confirm("確定要刪除此測項嗎？")) return;
                 data.test_standards[currentEditIndex].items.splice(
                     currentEditItemIndex,
-                    1
+                    1,
                 );
                 renderSidebar();
                 clearEditor();

@@ -4,74 +4,89 @@
     "default_criteria_version": "MODA_v1.0",
     "project_meta_schema": [
         {
-            "key": "project_name",
-            "label": "專案名稱",
-            "type": "text",
-            "required": true,
-            "show_in_overview": true
+            "group_label": "基本資料",
+            "fields": [
+                {
+                    "key": "project_name",
+                    "label": "專案名稱",
+                    "type": "text",
+                    "required": true,
+                    "show_in_overview": true
+                },
+                {
+                    "key": "report_id",
+                    "label": "報告編號",
+                    "type": "text",
+                    "required": true,
+                    "show_in_overview": true
+                },
+                {
+                    "key": "tester_1",
+                    "label": "檢測人員1",
+                    "type": "text",
+                    "required": true,
+                    "show_in_overview": true
+                },
+                {
+                    "key": "tester_2",
+                    "label": "檢測人員2",
+                    "type": "text",
+                    "required": false,
+                    "show_in_overview": true
+                },
+                {
+                    "key": "tester_3",
+                    "label": "檢測人員3",
+                    "type": "text",
+                    "required": false,
+                    "show_in_overview": true
+                },
+                {
+                    "key": "start_date",
+                    "label": "檢測起始日期",
+                    "type": "date",
+                    "required": true,
+                    "show_in_overview": true
+                },
+                {
+                    "key": "save_path",
+                    "label": "存檔位置",
+                    "type": "path_selector",
+                    "required": true
+                },
+                {
+                    "key": "test_scope",
+                    "label": "檢測範圍",
+                    "type": "checkbox_group",
+                    "required": true,
+                    "show_in_overview": true,
+                    "options": []
+                }
+            ]
         },
         {
-            "key": "report_id",
-            "label": "報告編號",
-            "type": "text",
-            "required": true,
-            "show_in_overview": true
+            "group_label": "無人機資料",
+            "fields": [
+                {
+                    "key": "uav_model",
+                    "label": "無人機型號",
+                    "type": "text",
+                    "required": true,
+                    "show_in_overview": true
+                }
+            ]
         },
         {
-            "key": "tester_1",
-            "label": "檢測人員1",
-            "type": "text",
-            "required": true,
-            "show_in_overview": true
-        },
-        {
-            "key": "tester_2",
-            "label": "檢測人員2",
-            "type": "text",
-            "required": false,
-            "show_in_overview": true
-        },
-        {
-            "key": "tester_3",
-            "label": "檢測人員3",
-            "type": "text",
-            "required": false,
-            "show_in_overview": true
-        },
-        {
-            "key": "uav_model",
-            "label": "無人機型號",
-            "type": "text",
-            "required": true,
-            "show_in_overview": true
-        },
-        {
-            "key": "gcs_model",
-            "label": "地面控制站型號",
-            "type": "text",
-            "required": true,
-            "show_in_overview": true
-        },
-        {
-            "key": "start_date",
-            "label": "檢測起始日期",
-            "type": "date",
-            "required": true,
-            "show_in_overview": true
-        },
-        {
-            "key": "test_scope",
-            "label": "檢測範圍",
-            "type": "checkbox_group",
-            "required": true,
-            "show_in_overview": true,
-            "options": []
-        },
-        {
-            "key": "save_path",
-            "label": "存檔位置",
-            "type": "path_selector",
-            "required": true
+            "group_label": "地面控制站資料",
+            "fields": [
+                {
+                    "key": "gcs_model",
+                    "label": "地面控制站型號",
+                    "type": "text",
+                    "required": true,
+                    "show_in_overview": true
+                }
+            ]
         }
     ],
     "test_standards": [

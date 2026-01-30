@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QFormLayout,
     QLineEdit,
+    QPlainTextEdit,
     QDateEdit,
     QGroupBox,
     QCheckBox,
@@ -53,95 +54,28 @@ class ProjectFormController:
 
         # 建立表單容器
         form_container = QWidget()
-        form = QFormLayout(form_container)
-        form.setContentsMargins(10, 10, 10, 10)
-        desktop = DEFAULT_DESKTOP_PATH
+        main_layout = QVBoxLayout(form_container)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(15)
 
-        for field in self.meta_schema:
-            key = field["key"]
-            f_type = field["type"]
-            label = field["label"]
+        # 遍歷每個群組
+        for group in self.meta_schema:
+            group_label = group.get("group_label", "")
+            fields = group.get("fields", [])
 
-            if f_type == "hidden":
-                continue
+            # 建立群組框
+            group_box = QGroupBox(group_label)
+            group_layout = QFormLayout(group_box)
+            group_layout.setContentsMargins(10, 15, 10, 10)
+            group_layout.setSpacing(8)
 
-            widget = None
+            # 渲染群組內的欄位
+            for field in fields:
+                self._create_field_widget(field, group_layout)
 
-            if f_type == "text":
-                widget = QLineEdit()
-                if self.is_edit_mode and key in self.existing_data:
-                    widget.setText(str(self.existing_data[key]))
-                    if key == "project_name":
-                        widget.setReadOnly(True)
-                        widget.setStyleSheet("background-color:#f0f0f0;")
+            main_layout.addWidget(group_box)
 
-            elif f_type == "date":
-                widget = QDateEdit()
-                widget.setCalendarPopup(True)
-                widget.setDisplayFormat(DATE_FMT_QT)
-                if self.is_edit_mode and key in self.existing_data:
-                    widget.setDate(
-                        QDate.fromString(self.existing_data[key], DATE_FMT_QT)
-                    )
-                else:
-                    widget.setDate(QDate.currentDate())
-
-            elif f_type == "path_selector":
-                widget = QWidget()
-                h = QHBoxLayout(widget)
-                h.setContentsMargins(0, 0, 0, 0)
-                pe = QLineEdit()
-                btn = QToolButton()
-                btn.setText("...")
-
-                if self.is_edit_mode:
-                    pe.setText(self.existing_data.get(key, ""))
-                    pe.setReadOnly(True)
-                    btn.setEnabled(False)
-                else:
-                    pe.setText(desktop)
-                    btn.clicked.connect(lambda _, le=pe: self._browse(le))
-
-                h.addWidget(pe)
-                h.addWidget(btn)
-                widget.line_edit = pe
-
-            elif f_type == "checkbox_group":
-                widget = QGroupBox()
-                v = QVBoxLayout(widget)
-                v.setContentsMargins(5, 5, 5, 5)
-
-                opts = []
-                if key == "test_scope":
-                    standards = self.full_config.get("test_standards", [])
-                    for sec in standards:
-                        opts.append(
-                            {
-                                "value": sec["section_id"],
-                                "label": f"{sec['section_id']} {sec['section_name']}",
-                            }
-                        )
-                else:
-                    opts = field.get("options", [])
-
-                vals = self.existing_data.get(key, []) if self.is_edit_mode else []
-                widget.checkboxes = []
-                for o in opts:
-                    chk = QCheckBox(o["label"])
-                    chk.setProperty("val", o["value"])
-                    if self.is_edit_mode and o["value"] in vals:
-                        chk.setChecked(True)
-                    v.addWidget(chk)
-                    widget.checkboxes.append(chk)
-
-            if widget:
-                form.addRow(label, widget)
-                self.inputs[key] = {
-                    "w": widget,
-                    "t": f_type,
-                    "label": label,
-                    "required": field.get("required", False),
-                }
+        main_layout.addStretch()
 
         # 將表單容器放入滾動區域
         scroll.setWidget(form_container)
@@ -151,6 +85,136 @@ class ProjectFormController:
         btns.accepted.connect(self.dialog.accept)
         btns.rejected.connect(self.dialog.reject)
         layout.addWidget(btns)
+
+    def _create_field_widget(self, field, parent_layout):
+        """根據欄位定義建立對應的 widget 並加入佈局"""
+        key = field["key"]
+        f_type = field["type"]
+        label = field["label"]
+        desktop = DEFAULT_DESKTOP_PATH
+
+        if f_type == "hidden":
+            return
+
+        # 輔助函式：取得欄位值（支援物件格式 {value, remark}）
+        def get_value(key, default=None):
+            if key not in self.existing_data:
+                return default
+            field_data = self.existing_data[key]
+            if isinstance(field_data, dict):
+                return field_data.get("value", default)
+            return field_data
+
+        widget = None
+
+        if f_type == "text":
+            widget = QLineEdit()
+            if self.is_edit_mode and key in self.existing_data:
+                widget.setText(str(get_value(key, "")))
+                if key == "project_name":
+                    widget.setReadOnly(True)
+                    widget.setStyleSheet("background-color:#f0f0f0;")
+
+        elif f_type == "date":
+            widget = QDateEdit()
+            widget.setCalendarPopup(True)
+            widget.setDisplayFormat(DATE_FMT_QT)
+            if self.is_edit_mode and key in self.existing_data:
+                widget.setDate(QDate.fromString(get_value(key, ""), DATE_FMT_QT))
+            else:
+                widget.setDate(QDate.currentDate())
+
+        elif f_type == "textarea":
+            widget = QPlainTextEdit()
+            widget.setMaximumHeight(100)
+            if self.is_edit_mode and key in self.existing_data:
+                widget.setPlainText(str(get_value(key, "")))
+
+        elif f_type == "path_selector":
+            widget = QWidget()
+            h = QHBoxLayout(widget)
+            h.setContentsMargins(0, 0, 0, 0)
+            pe = QLineEdit()
+            btn = QToolButton()
+            btn.setText("...")
+
+            if self.is_edit_mode:
+                pe.setText(get_value(key, "") or "")
+                pe.setReadOnly(True)
+                btn.setEnabled(False)
+            else:
+                pe.setText(desktop)
+                btn.clicked.connect(lambda _, le=pe: self._browse(le))
+
+            h.addWidget(pe)
+            h.addWidget(btn)
+            widget.line_edit = pe
+
+        elif f_type == "checkbox_group":
+            widget = QGroupBox()
+            v = QVBoxLayout(widget)
+            v.setContentsMargins(5, 5, 5, 5)
+
+            opts = []
+            if key == "test_scope":
+                standards = self.full_config.get("test_standards", [])
+                for sec in standards:
+                    opts.append(
+                        {
+                            "value": sec["section_id"],
+                            "label": f"{sec['section_id']} {sec['section_name']}",
+                        }
+                    )
+            else:
+                opts = field.get("options", [])
+
+            vals = get_value(key, []) if self.is_edit_mode else []
+            widget.checkboxes = []
+            for o in opts:
+                chk = QCheckBox(o["label"])
+                chk.setProperty("val", o["value"])
+                if self.is_edit_mode and o["value"] in vals:
+                    chk.setChecked(True)
+                v.addWidget(chk)
+                widget.checkboxes.append(chk)
+
+        if widget:
+            # 處理備註功能
+            has_remark = field.get("remark", False)
+            remark_widget = None
+
+            if has_remark:
+                # 建立包含原欄位和備註的容器
+                container = QWidget()
+                h_layout = QHBoxLayout(container)
+                h_layout.setContentsMargins(0, 0, 0, 0)
+                h_layout.setSpacing(8)
+
+                # 原欄位佔較大空間
+                h_layout.addWidget(widget, stretch=3)
+
+                # 備註輸入框
+                remark_widget = QLineEdit()
+                remark_widget.setPlaceholderText("備註...")
+                if self.is_edit_mode and key in self.existing_data:
+                    # 支援物件格式 {value, remark}
+                    field_data = self.existing_data[key]
+                    if isinstance(field_data, dict):
+                        remark_widget.setText(str(field_data.get("remark", "")))
+                h_layout.addWidget(remark_widget, stretch=2)
+
+                parent_layout.addRow(label, container)
+            else:
+                parent_layout.addRow(label, widget)
+
+            self.inputs[key] = {
+                "w": widget,
+                "t": f_type,
+                "label": label,
+                "required": field.get("required", False),
+                "has_remark": has_remark,
+                "remark_widget": remark_widget,
+            }
 
     def _browse(self, le):
         dialog = QFileDialog(self.dialog, "選擇資料夾")
@@ -189,6 +253,8 @@ class ProjectFormController:
 
             if t == "text":
                 is_empty = not w.text().strip()
+            elif t == "textarea":
+                is_empty = not w.toPlainText().strip()
             elif t == "path_selector":
                 is_empty = not w.line_edit.text().strip()
             elif t == "checkbox_group":
@@ -205,14 +271,32 @@ class ProjectFormController:
         for key, inf in self.inputs.items():
             w = inf["w"]
             t = inf["t"]
+            has_remark = inf.get("has_remark", False)
+            remark_widget = inf.get("remark_widget")
+
+            # 取得欄位值
             if t == "text":
-                data[key] = w.text()
+                value = w.text()
+            elif t == "textarea":
+                value = w.toPlainText()
             elif t == "date":
-                data[key] = w.date().toString(DATE_FMT_QT)
+                value = w.date().toString(DATE_FMT_QT)
             elif t == "path_selector":
-                data[key] = w.line_edit.text()
+                value = w.line_edit.text()
             elif t == "checkbox_group":
-                data[key] = [c.property("val") for c in w.checkboxes if c.isChecked()]
+                value = [c.property("val") for c in w.checkboxes if c.isChecked()]
+            else:
+                value = None
+
+            # 有備註的欄位使用物件格式 {value, remark}
+            if has_remark and remark_widget:
+                data[key] = {
+                    "value": value,
+                    "remark": remark_widget.text(),
+                }
+            else:
+                data[key] = value
+
         return data
 
 
