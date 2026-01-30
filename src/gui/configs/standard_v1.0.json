@@ -72,18 +72,6 @@
             "label": "存檔位置",
             "type": "path_selector",
             "required": true
-        },
-        {
-            "key": "uav_photo_path",
-            "label": "UAV 照片",
-            "type": "hidden",
-            "required": false
-        },
-        {
-            "key": "gcs_photo_path",
-            "label": "GCS 照片",
-            "type": "hidden",
-            "required": false
         }
     ],
     "test_standards": [

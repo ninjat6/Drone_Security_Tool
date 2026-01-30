@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QScrollArea,
     QFrame,
+    QMessageBox,
 )
 
 from constants import DEFAULT_DESKTOP_PATH, DATE_FMT_QT
@@ -42,14 +43,14 @@ class ProjectFormController:
     def _init_ui(self):
         # 取得 BorderedDialog 的內容區域佈局
         layout = self.dialog.contentWidget().layout()
-        
+
         # 建立滾動區域
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        
+
         # 建立表單容器
         form_container = QWidget()
         form = QFormLayout(form_container)
@@ -135,7 +136,12 @@ class ProjectFormController:
 
             if widget:
                 form.addRow(label, widget)
-                self.inputs[key] = {"w": widget, "t": f_type}
+                self.inputs[key] = {
+                    "w": widget,
+                    "t": f_type,
+                    "label": label,
+                    "required": field.get("required", False),
+                }
 
         # 將表單容器放入滾動區域
         scroll.setWidget(form_container)
@@ -157,9 +163,42 @@ class ProjectFormController:
                 le.setText(files[0])
 
     def run(self):
-        if self.dialog.exec() == QDialog.Accepted:
+        while self.dialog.exec() == QDialog.Accepted:
+            errors = self._validate()
+            if errors:
+                QMessageBox.warning(
+                    self.dialog,
+                    "欄位驗證失敗",
+                    "以下必填欄位尚未填寫：\n" + "\n".join(f"- {e}" for e in errors),
+                )
+                continue
             return self._collect()
         return None
+
+    def _validate(self):
+        """驗證必填欄位，回傳錯誤訊息列表"""
+        errors = []
+        for key, inf in self.inputs.items():
+            if not inf.get("required", False):
+                continue
+
+            w = inf["w"]
+            t = inf["t"]
+            label = inf["label"]
+            is_empty = False
+
+            if t == "text":
+                is_empty = not w.text().strip()
+            elif t == "path_selector":
+                is_empty = not w.line_edit.text().strip()
+            elif t == "checkbox_group":
+                is_empty = not any(c.isChecked() for c in w.checkboxes)
+            # date 類型有預設值，不需要驗證
+
+            if is_empty:
+                errors.append(label)
+
+        return errors
 
     def _collect(self):
         data = {}
@@ -178,8 +217,4 @@ class ProjectFormController:
 
 
 if __name__ == "__main__":
-    app = QApplication([])
-    controller = ProjectFormController(None, {})
-    result = controller.run()
-    print(result)
-    app.exec()
+    pass
