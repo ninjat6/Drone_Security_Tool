@@ -946,20 +946,20 @@
                         <div class="schema-group-header">
                             <div style="display:flex; align-items:center; gap:10px; flex:1;">
                                 <div style="display:flex; flex-direction:column; gap:2px;">
-                                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.7rem;" 
+                                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.7rem;"
                                             onclick="moveSchemaGroup(${gIdx}, -1)" ${gIdx === 0 ? "disabled" : ""}>▲</button>
-                                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.7rem;" 
+                                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.7rem;"
                                             onclick="moveSchemaGroup(${gIdx}, 1)" ${gIdx === data.project_meta_schema.length - 1 ? "disabled" : ""}>▼</button>
                                 </div>
-                                <input type="text" value="${group.group_label || ""}" 
-                                       placeholder="群組名稱 (必填)" 
+                                <input type="text" value="${group.group_label || ""}"
+                                       placeholder="群組名稱 (必填)"
                                        style="${!group.group_label ? "border-color:#e74c3c;" : ""}"
                                        onchange="updateSchemaGroup(${gIdx}, 'group_label', this.value); this.style.borderColor = this.value.trim() ? '' : '#e74c3c';">
                             </div>
                             <div class="group-actions">
-                                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" 
+                                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;"
                                         onclick="addFieldToGroup(${gIdx})">+ 欄位</button>
-                                <button class="btn btn-danger" style="padding:4px 8px;" 
+                                <button class="btn btn-danger" style="padding:4px 8px;"
                                         onclick="removeSchemaGroup(${gIdx})">×</button>
                             </div>
                         </div>
@@ -983,11 +983,11 @@
                                             (field, fIdx) => `
                                         <tr data-group-idx="${gIdx}" data-field-idx="${fIdx}">
                                             <td><span class="drag-handle" data-group-idx="${gIdx}" data-field-idx="${fIdx}">☰</span></td>
-                                            <td><input type="text" value="${field.key || ""}" 
+                                            <td><input type="text" value="${field.key || ""}"
                                                        style="${!field.key ? "border-color:#e74c3c;" : ""}"
                                                        placeholder="必填"
                                                        onchange="updateSchemaField(${gIdx}, ${fIdx}, 'key', this.value); this.style.borderColor = this.value.trim() ? '' : '#e74c3c';"></td>
-                                            <td><input type="text" value="${field.label || ""}" 
+                                            <td><input type="text" value="${field.label || ""}"
                                                        style="${!field.label ? "border-color:#e74c3c;" : ""}"
                                                        placeholder="必填"
                                                        onchange="updateSchemaField(${gIdx}, ${fIdx}, 'label', this.value); this.style.borderColor = this.value.trim() ? '' : '#e74c3c';"></td>
@@ -1001,13 +1001,13 @@
                                                     <option value="hidden" ${field.type === "hidden" ? "selected" : ""}>hidden</option>
                                                 </select>
                                             </td>
-                                            <td><input type="checkbox" ${field.required ? "checked" : ""} 
+                                            <td><input type="checkbox" ${field.required ? "checked" : ""}
                                                        onchange="updateSchemaField(${gIdx}, ${fIdx}, 'required', this.checked)"></td>
-                                            <td><input type="checkbox" ${field.show_in_overview ? "checked" : ""} 
+                                            <td><input type="checkbox" ${field.show_in_overview ? "checked" : ""}
                                                        onchange="updateSchemaField(${gIdx}, ${fIdx}, 'show_in_overview', this.checked)"></td>
-                                            <td><input type="checkbox" ${field.remark ? "checked" : ""} 
+                                            <td><input type="checkbox" ${field.remark ? "checked" : ""}
                                                        onchange="updateSchemaField(${gIdx}, ${fIdx}, 'remark', this.checked)"></td>
-                                            <td><button class="btn btn-danger" style="padding:4px 8px;" 
+                                            <td><button class="btn btn-danger" style="padding:4px 8px;"
                                                         onclick="removeSchemaField(${gIdx}, ${fIdx})">×</button></td>
                                         </tr>
                                     `,
@@ -1085,6 +1085,29 @@
             let dragGhost = null;
             let ghostOffsetX = 0;
             let ghostOffsetY = 0;
+
+            // Auto-scroll variables
+            let autoScrollSpeed = 0;
+            let autoScrollFrame = null;
+
+            function autoScroll() {
+                if (autoScrollSpeed !== 0) {
+                    const activeTab = document.querySelector(
+                        ".tab-content.active",
+                    );
+                    if (activeTab) {
+                        const container =
+                            activeTab.querySelector(".form-container");
+                        if (container) {
+                            container.scrollTop += autoScrollSpeed;
+                        }
+                    }
+                    autoScrollFrame = requestAnimationFrame(autoScroll);
+                } else {
+                    cancelAnimationFrame(autoScrollFrame);
+                    autoScrollFrame = null;
+                }
+            }
 
             function handleCustomDragStart(e) {
                 if (e.button !== 0) return; // Only left click
@@ -1250,12 +1273,51 @@
                         tbody.appendChild(placeholder);
                     }
                 }
+
+                // Auto-scroll detection
+                const activeTab = document.querySelector(".tab-content.active");
+                if (activeTab) {
+                    const container =
+                        activeTab.querySelector(".form-container");
+                    if (container) {
+                        const rect = container.getBoundingClientRect();
+                        const threshold = 50; // pixels from edge to trigger scroll
+                        const maxSpeed = 15;
+
+                        if (e.clientY < rect.top + threshold) {
+                            // Scroll Up
+                            const intensity =
+                                (rect.top + threshold - e.clientY) / threshold;
+                            autoScrollSpeed = -Math.max(
+                                2,
+                                intensity * maxSpeed,
+                            );
+                            if (!autoScrollFrame) autoScroll();
+                        } else if (e.clientY > rect.bottom - threshold) {
+                            // Scroll Down
+                            const intensity =
+                                (e.clientY - (rect.bottom - threshold)) /
+                                threshold;
+                            autoScrollSpeed = Math.max(2, intensity * maxSpeed);
+                            if (!autoScrollFrame) autoScroll();
+                        } else {
+                            autoScrollSpeed = 0;
+                        }
+                    }
+                }
             }
 
             function handleCustomDragEnd(e) {
                 document.removeEventListener("mousemove", handleCustomDragMove);
                 document.removeEventListener("mouseup", handleCustomDragEnd);
                 document.body.style.cursor = "";
+
+                // Stop auto-scroll
+                autoScrollSpeed = 0;
+                if (autoScrollFrame) {
+                    cancelAnimationFrame(autoScrollFrame);
+                    autoScrollFrame = null;
+                }
 
                 if (dragGhost && dragGhost.parentNode) {
                     dragGhost.parentNode.removeChild(dragGhost);
@@ -1277,9 +1339,9 @@
                     const newParentTbody = placeholder.parentNode;
                     const newGroup = newParentTbody.closest(".schema-group");
                     const newGroupIdx = parseInt(newGroup.dataset.groupIdx);
-                    const newFieldIdx = Array.from(
-                        newParentTbody.children,
-                    ).indexOf(placeholder);
+                    const newFieldIdx = Array.from(newParentTbody.children)
+                        .filter((el) => el !== draggedRow)
+                        .indexOf(placeholder);
 
                     // Perform the data update
                     if (
