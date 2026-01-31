@@ -14,19 +14,19 @@
                 font-family:
                     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                     sans-serif;
-                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                color: #e0e0e0;
+                background: #18181b; /* Zinc 950 */
+                color: #e4e4e7; /* Zinc 200 */
                 min-height: 100vh;
             }
 
             /* Header */
             .header {
-                background: rgba(255, 255, 255, 0.05);
+                background: #27272a; /* Zinc 900 */
                 padding: 15px 20px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                border-bottom: 1px solid #3f3f46; /* Zinc 700 */
             }
             .header h1 {
                 font-size: 1.3rem;
@@ -48,7 +48,7 @@
                 color: #888;
             }
             .header-info .info-value {
-                color: #667eea;
+                color: #60a5fa; /* Blue 400 */
                 font-weight: 500;
             }
             .btn {
@@ -58,48 +58,60 @@
                 cursor: pointer;
                 font-size: 0.9rem;
                 transition: all 0.2s;
+                font-weight: 500;
             }
             .btn-primary {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: #fff;
+                background: transparent;
+                border: 1px solid #3b82f6; /* Blue 500 */
+                color: #60a5fa; /* Blue 400 */
+                box-shadow: none;
             }
             .btn-primary:hover {
+                background: rgba(59, 130, 246, 0.1); /* Blue 500 with opacity */
+                border-color: #60a5fa; /* Blue 400 */
                 transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             }
             .btn-secondary {
-                background: rgba(255, 255, 255, 0.1);
-                color: #e0e0e0;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: transparent;
+                color: #e4e4e7;
+                border: 1px solid #3f3f46; /* Zinc 700 */
             }
             .btn-secondary:hover {
-                background: rgba(255, 255, 255, 0.15);
+                background: rgba(255, 255, 255, 0.05);
+                border-color: #52525b; /* Zinc 600 */
             }
             .btn-danger {
-                background: #dc3545;
-                color: #fff;
+                background: transparent;
+                border: 1px solid #ef4444; /* Red 500 */
+                color: #f87171; /* Red 400 */
+            }
+            .btn-danger:hover {
+                background: rgba(239, 68, 68, 0.1);
+                border-color: #f87171;
             }
 
             /* Tabs */
             .tabs {
                 display: flex;
-                background: rgba(255, 255, 255, 0.03);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                background: #27272a; /* Zinc 900 */
+                border-bottom: 1px solid #3f3f46;
             }
             .tab {
                 padding: 12px 24px;
                 cursor: pointer;
                 border-bottom: 2px solid transparent;
                 transition: all 0.2s;
-                color: #888;
+                color: #a1a1aa; /* Zinc 400 */
             }
             .tab:hover {
-                color: #fff;
-                background: rgba(255, 255, 255, 0.05);
+                color: #e4e4e7;
+                background: #3f3f46;
             }
             .tab.active {
-                color: #667eea;
-                border-bottom-color: #667eea;
+                color: #60a5fa; /* Blue 400 */
+                border-bottom-color: #6366f1; /* Indigo 500 */
+                background: #18181b; /* Seamless match with content */
             }
 
             /* Tab Content */
@@ -132,16 +144,17 @@
                 width: 100%;
                 max-width: 500px;
                 padding: 10px 12px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                border: 1px solid #3f3f46; /* Zinc 700 */
                 border-radius: 6px;
-                background: rgba(255, 255, 255, 0.05);
+                background: #18181b; /* Darker input bg */
                 color: #fff;
                 font-size: 1rem;
             }
             .form-group input:focus,
             .form-group select:focus {
                 outline: none;
-                border-color: #667eea;
+                border-color: #3b82f6; /* Blue 500 */
+                box-shadow: 0 0 0 1px #3b82f6;
             }
 
             /* Meta Schema Table */
@@ -154,7 +167,7 @@
             .schema-table td {
                 padding: 10px;
                 text-align: left;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                border-bottom: 1px solid #3f3f46; /* Zinc 700 */
             }
             .schema-table th {
                 color: #888;
@@ -165,9 +178,9 @@
             .schema-table select {
                 width: 100%;
                 padding: 6px 8px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
+                border: 1px solid #3f3f46; /* Zinc 700 */
                 border-radius: 4px;
-                background: rgba(255, 255, 255, 0.05);
+                background: #18181b; /* Zinc 950 */
                 color: #fff;
                 font-size: 0.9rem;
             }
@@ -175,30 +188,31 @@
                 width: auto;
             }
             /* Fix dropdown options visibility in dark theme */
+            /* Fix dropdown options visibility in dark theme */
             select option {
-                background: #1a1a2e;
-                color: #e0e0e0;
+                background: #18181b;
+                color: #e4e4e7;
             }
 
             /* Schema Group Styles */
             .schema-group {
-                background: rgba(255, 255, 255, 0.03);
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: #27272a; /* Zinc 900 */
+                border: 1px solid #3f3f46; /* Zinc 700 */
                 border-radius: 8px;
                 margin-bottom: 20px;
                 overflow: hidden;
             }
             .schema-group-header {
-                background: rgba(255, 255, 255, 0.05);
+                background: #27272a; /* Zinc 900 */
                 padding: 12px 15px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                border-bottom: 1px solid #3f3f46;
             }
             .schema-group-header input {
                 background: transparent;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                border: 1px solid transparent; /* Hidden unless focused */
                 border-radius: 4px;
                 padding: 6px 10px;
                 color: #fff;
@@ -207,9 +221,13 @@
                 flex: 1;
                 max-width: 300px;
             }
+            .schema-group-header input:hover {
+                border-color: #3f3f46;
+            }
             .schema-group-header input:focus {
                 outline: none;
-                border-color: #667eea;
+                background: #18181b;
+                border-color: #3b82f6;
             }
             .schema-group-header .group-actions {
                 display: flex;
@@ -220,10 +238,10 @@
             }
             .schema-group.dragging {
                 opacity: 0.4;
-                background: rgba(102, 126, 234, 0.2);
+                background: rgba(59, 130, 246, 0.1); /* Blue tint */
             }
             .schema-group.drag-over {
-                border: 2px dashed #667eea;
+                border: 2px dashed #3b82f6; /* Blue 500 */
             }
 
             /* Drag handle */
@@ -239,24 +257,26 @@
             }
             .schema-table tr.dragging {
                 opacity: 0.4;
-                background: rgba(102, 126, 234, 0.2);
+                background: rgba(99, 102, 241, 0.1);
             }
             /* drag-over removed to avoid double visual indicators */
             .schema-table tr.drag-placeholder {
-                background: rgba(102, 126, 234, 0.3);
-                border: 2px dashed #667eea;
+                background: rgba(59, 130, 246, 0.05);
+                border: 2px dashed #3b82f6;
             }
             .schema-table tr.drag-placeholder td {
-                background: rgba(102, 126, 234, 0.1);
+                background: rgba(59, 130, 246, 0.05); /* Unified background */
             }
             .drag-ghost {
                 position: fixed;
                 pointer-events: none;
                 z-index: 9999;
-                opacity: 0.8;
-                background: #2d3748;
-                border: 1px solid #4a5568;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                opacity: 0.95;
+                background: #27272a; /* Zinc 900 */
+                border: 1px solid #2563eb; /* Blue 600 */
+                box-shadow:
+                    0 10px 15px -3px rgba(0, 0, 0, 0.5),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.1);
                 border-radius: 4px;
                 display: table; /* Maintain table layout */
                 width: auto;
@@ -270,14 +290,9 @@
             .drag-ghost select {
                 width: 100%;
                 padding: 6px 8px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
+                border: 1px solid #3f3f46;
                 border-radius: 4px;
-                background: rgba(
-                    255,
-                    255,
-                    255,
-                    0.05
-                ); /* Match .schema-table input */
+                background: #18181b; /* Zinc 950 */
                 color: #fff;
                 font-size: 0.9rem;
             }
@@ -297,24 +312,24 @@
             /* Sidebar */
             .sidebar {
                 width: 280px;
-                background: rgba(255, 255, 255, 0.03);
-                border-right: 1px solid rgba(255, 255, 255, 0.1);
+                background: #18181b;
+                border-right: 1px solid #3f3f46;
                 overflow-y: auto;
                 flex-shrink: 0;
             }
             .sidebar-header {
                 padding: 15px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                border-bottom: 1px solid #3f3f46;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
             .sidebar-header h3 {
                 font-size: 0.9rem;
-                color: #888;
+                color: #a1a1aa;
             }
             .section-item {
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                border-bottom: 1px solid #27272a;
             }
             .section-header {
                 padding: 12px 15px;
@@ -324,6 +339,7 @@
                 gap: 8px;
                 transition: background 0.2s;
                 justify-content: space-between;
+                background: #27272a;
             }
             .section-header .section-info {
                 display: flex;
@@ -346,10 +362,11 @@
                 opacity: 1;
             }
             .section-header:hover {
-                background: rgba(255, 255, 255, 0.05);
+                background: #3f3f46;
             }
             .section-header.active {
-                background: rgba(102, 126, 234, 0.2);
+                background: rgba(59, 130, 246, 0.1);
+                color: #60a5fa;
             }
             .section-header .arrow {
                 transition: transform 0.2s;
@@ -373,12 +390,13 @@
                 transition: all 0.2s;
             }
             .item-entry:hover {
-                background: rgba(255, 255, 255, 0.05);
+                background: #27272a;
                 color: #fff;
             }
             .item-entry.active {
-                background: rgba(102, 126, 234, 0.15);
-                color: #667eea;
+                background: rgba(59, 130, 246, 0.15);
+                color: #60a5fa;
+                border-right: 2px solid #3b82f6;
             }
 
             /* Editor Panel */
@@ -390,20 +408,20 @@
             .editor-panel h2 {
                 font-size: 1.2rem;
                 margin-bottom: 20px;
-                color: #fff;
+                color: #e4e4e7; /* Zinc 200 */
             }
             .editor-section {
-                background: rgba(255, 255, 255, 0.03);
+                background: #27272a; /* Zinc 900 */
                 border-radius: 8px;
                 padding: 20px;
                 margin-bottom: 20px;
             }
             .editor-section h3 {
                 font-size: 1rem;
-                color: #888;
+                color: #a1a1aa; /* Zinc 400 */
                 margin-bottom: 15px;
                 padding-bottom: 10px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                border-bottom: 1px solid #3f3f46;
             }
             .editor-row {
                 display: flex;
@@ -421,9 +439,9 @@
                 width: 100%;
                 min-height: 100px;
                 padding: 10px 12px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                border: 1px solid #3f3f46;
                 border-radius: 6px;
-                background: rgba(255, 255, 255, 0.05);
+                background: #18181b; /* Zinc 950 */
                 color: #fff;
                 font-size: 0.95rem;
                 resize: vertical;
@@ -431,32 +449,34 @@
             }
             textarea:focus {
                 outline: none;
-                border-color: #667eea;
+                border-color: #3b82f6; /* Blue 500 */
+                box-shadow: 0 0 0 1px #3b82f6;
             }
 
             /* Checklist Preview */
             .checklist-preview {
-                background: rgba(0, 0, 0, 0.2);
+                background: #18181b;
                 border-radius: 6px;
                 padding: 15px;
                 margin-top: 10px;
+                border: 1px solid #3f3f46;
             }
             .checklist-preview h4 {
                 font-size: 0.85rem;
-                color: #888;
+                color: #a1a1aa; /* Zinc 400 */
                 margin-bottom: 10px;
             }
             .checklist-item {
                 padding: 8px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                border-bottom: 1px solid #27272a;
                 font-size: 0.9rem;
-                color: #ccc;
+                color: #d4d4d8; /* Zinc 300 */
             }
             .checklist-item:last-child {
                 border-bottom: none;
             }
             .checklist-item .id {
-                color: #667eea;
+                color: #60a5fa; /* Blue 400 */
                 margin-right: 8px;
             }
 
@@ -470,7 +490,7 @@
                 align-items: center;
                 gap: 6px;
                 cursor: pointer;
-                color: #ccc;
+                color: #d4d4d8; /* Zinc 300 */
             }
 
             /* Action Buttons */
@@ -487,11 +507,12 @@
                 align-items: center;
                 justify-content: center;
                 height: 100%;
-                color: #666;
+                color: #71717a; /* Zinc 500 */
             }
             .empty-state .icon {
                 font-size: 3rem;
                 margin-bottom: 15px;
+                color: #52525b; /* Zinc 600 */
             }
 
             /* Hidden file input */
