@@ -19,6 +19,22 @@
                 min-height: 100vh;
             }
 
+            /* Custom Scrollbar */
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #18181b;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #3f3f46;
+                border-radius: 4px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #52525b;
+            }
+
             /* Header */
             .header {
                 background: #27272a; /* Zinc 900 */
@@ -302,6 +318,150 @@
                     opacity 0.15s ease;
             }
 
+            /* Options Sidebar */
+            .options-sidebar {
+                position: fixed;
+                top: 0;
+                right: -350px;
+                width: 350px;
+                height: 100%;
+                background: #18181b;
+                border-left: 1px solid #3f3f46;
+                z-index: 1000;
+                display: flex;
+                flex-direction: column;
+                transition: right 0.3s ease;
+            }
+            .options-sidebar.open {
+                right: 0;
+            }
+            .options-sidebar-header {
+                padding: 20px;
+                border-bottom: 1px solid #3f3f46;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .options-sidebar-header h3 {
+                font-size: 1rem;
+                color: #e4e4e7;
+                margin: 0;
+            }
+            .options-sidebar-header .close-btn {
+                background: transparent;
+                border: none;
+                color: #71717a;
+                font-size: 1.2rem;
+                cursor: pointer;
+                padding: 4px 8px;
+            }
+            .options-sidebar-header .close-btn:hover {
+                color: #fff;
+            }
+            .options-sidebar-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+            }
+            .options-sidebar-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .option-item {
+                background: #27272a;
+                border-radius: 8px;
+                padding: 12px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .option-item .drag-handle {
+                cursor: grab;
+                color: #52525b;
+                font-size: 1rem;
+                user-select: none;
+            }
+            .option-item .drag-handle:active {
+                cursor: grabbing;
+            }
+            .option-item .inputs {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .option-item input {
+                width: 100%;
+                padding: 8px 10px;
+                border: 1px solid #3f3f46;
+                border-radius: 4px;
+                background: #18181b;
+                color: #fff;
+                font-size: 0.85rem;
+            }
+            .option-item input:focus {
+                outline: none;
+                border-color: #3b82f6;
+            }
+            .option-item input.error {
+                border-color: #ef4444;
+            }
+            .option-item .delete-btn {
+                background: transparent;
+                border: 1px solid #3f3f46;
+                border-radius: 4px;
+                color: #a1a1aa;
+                padding: 6px 10px;
+                cursor: pointer;
+            }
+            .option-item .delete-btn:hover {
+                background: rgba(239, 68, 68, 0.2);
+                border-color: #ef4444;
+                color: #f87171;
+            }
+            .option-item.dragging {
+                opacity: 0.5;
+                background: #3f3f46;
+            }
+            .option-item.drag-over {
+                border-top: 2px solid #3b82f6;
+            }
+            .options-sidebar-footer {
+                padding: 15px 20px;
+                border-top: 1px solid #3f3f46;
+            }
+            .options-sidebar-footer button {
+                width: 100%;
+                padding: 10px;
+                background: transparent;
+                border: 1px solid #3b82f6;
+                color: #60a5fa;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.9rem;
+            }
+            .options-sidebar-footer button:hover {
+                background: rgba(59, 130, 246, 0.1);
+            }
+            /* Push main content when sidebar open */
+            #tab-schema.sidebar-open .form-container {
+                margin-right: 350px;
+                transition: margin-right 0.3s ease;
+            }
+            .edit-options-btn {
+                padding: 3px 8px;
+                font-size: 0.75rem;
+                background: transparent;
+                border: 1px solid #3b82f6;
+                color: #60a5fa;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-left: 8px;
+            }
+            .edit-options-btn:hover {
+                background: rgba(59, 130, 246, 0.1);
+            }
             /* Tab 3: Two Column Layout */
             .two-column {
                 display: flex;
@@ -618,6 +778,22 @@
                 </div>
 
                 <div id="schema-groups-container"></div>
+            </div>
+
+            <!-- Options Sidebar -->
+            <div class="options-sidebar" id="options-sidebar">
+                <div class="options-sidebar-header">
+                    <h3 id="options-sidebar-title">編輯選項</h3>
+                    <button class="close-btn" onclick="closeOptionsSidebar()">
+                        ×
+                    </button>
+                </div>
+                <div class="options-sidebar-content">
+                    <div class="options-sidebar-list" id="options-list"></div>
+                </div>
+                <div class="options-sidebar-footer">
+                    <button onclick="addOptionToSidebar()">+ 新增選項</button>
+                </div>
             </div>
         </div>
 
@@ -991,7 +1167,7 @@
                                                        style="${!field.label ? "border-color:#e74c3c;" : ""}"
                                                        placeholder="必填"
                                                        onchange="updateSchemaField(${gIdx}, ${fIdx}, 'label', this.value); this.style.borderColor = this.value.trim() ? '' : '#e74c3c';"></td>
-                                            <td>
+                                            <td style="display:flex;align-items:center;gap:4px;">
                                                 <select onchange="updateSchemaField(${gIdx}, ${fIdx}, 'type', this.value)">
                                                     <option value="text" ${field.type === "text" ? "selected" : ""}>text</option>
                                                     <option value="textarea" ${field.type === "textarea" ? "selected" : ""}>textarea</option>
@@ -1000,6 +1176,7 @@
                                                     <option value="checkbox_group" ${field.type === "checkbox_group" ? "selected" : ""}>checkbox_group</option>
                                                     <option value="hidden" ${field.type === "hidden" ? "selected" : ""}>hidden</option>
                                                 </select>
+                                                ${field.type === "checkbox_group" ? `<button class="edit-options-btn" onclick="openOptionsSidebar(${gIdx}, ${fIdx})">編輯</button>` : ""}
                                             </td>
                                             <td><input type="checkbox" ${field.required ? "checked" : ""}
                                                        onchange="updateSchemaField(${gIdx}, ${fIdx}, 'required', this.checked)"></td>
@@ -1491,6 +1668,12 @@
 
             function updateSchemaField(gIdx, fIdx, key, value) {
                 data.project_meta_schema[gIdx].fields[fIdx][key] = value;
+
+                // Re-render table when type changes (to show/hide edit button)
+                if (key === "type") {
+                    renderSchemaTable();
+                }
+
                 saveToLocalStorage();
             }
 
@@ -1498,6 +1681,346 @@
                 data.project_meta_schema[gIdx].fields.splice(fIdx, 1);
                 renderSchemaTable();
                 saveToLocalStorage();
+            }
+
+            // ===== Options Sidebar =====
+            let currentOptGIdx = null;
+            let currentOptFIdx = null;
+            let optDragState = null;
+
+            function openOptionsSidebar(gIdx, fIdx) {
+                // Toggle: if clicking same field's edit button, close sidebar
+                if (currentOptGIdx === gIdx && currentOptFIdx === fIdx) {
+                    closeOptionsSidebar();
+                    return;
+                }
+
+                currentOptGIdx = gIdx;
+                currentOptFIdx = fIdx;
+
+                const field = data.project_meta_schema[gIdx].fields[fIdx];
+                const fieldLabel = field.label || field.key || "(未命名欄位)";
+
+                // Initialize options array if needed
+                if (!field.options) {
+                    field.options = [];
+                    saveToLocalStorage();
+                }
+
+                // Update sidebar title
+                document.getElementById("options-sidebar-title").textContent =
+                    `編輯選項 - ${fieldLabel}`;
+
+                // Render options list
+                renderOptionsList();
+
+                // Open sidebar with push effect
+                document
+                    .getElementById("options-sidebar")
+                    .classList.add("open");
+                document
+                    .getElementById("tab-schema")
+                    .classList.add("sidebar-open");
+            }
+
+            // ESC key to close sidebar
+            document.addEventListener("keydown", function (e) {
+                if (
+                    e.key === "Escape" &&
+                    document
+                        .getElementById("options-sidebar")
+                        .classList.contains("open")
+                ) {
+                    closeOptionsSidebar();
+                }
+            });
+
+            function closeOptionsSidebar() {
+                document
+                    .getElementById("options-sidebar")
+                    .classList.remove("open");
+                document
+                    .getElementById("tab-schema")
+                    .classList.remove("sidebar-open");
+                currentOptGIdx = null;
+                currentOptFIdx = null;
+
+                // Re-render to update button if options changed
+                renderSchemaTable();
+            }
+
+            function renderOptionsList() {
+                if (currentOptGIdx === null || currentOptFIdx === null) return;
+
+                const field =
+                    data.project_meta_schema[currentOptGIdx].fields[
+                        currentOptFIdx
+                    ];
+                const options = field.options || [];
+                const container = document.getElementById("options-list");
+
+                if (options.length === 0) {
+                    container.innerHTML =
+                        '<div style="text-align:center;color:#71717a;padding:30px;">尚無選項，請點擊下方按鈕新增</div>';
+                    return;
+                }
+
+                container.innerHTML = options
+                    .map(
+                        (opt, idx) => `
+                    <div class="option-item" data-opt-idx="${idx}">
+                        <span class="drag-handle" 
+                              onmousedown="startOptDrag(event, ${idx})">☰</span>
+                        <div class="inputs">
+                            <input type="text" 
+                                   placeholder="Value (儲存值)" 
+                                   value="${opt.value || ""}"
+                                   class="${!opt.value ? "error" : ""}"
+                                   onchange="updateSidebarOption(${idx}, 'value', this.value)"
+                                   oninput="this.classList.toggle('error', !this.value.trim())">
+                            <input type="text" 
+                                   placeholder="Label (顯示名稱)" 
+                                   value="${opt.label || ""}"
+                                   class="${!opt.label ? "error" : ""}"
+                                   onchange="updateSidebarOption(${idx}, 'label', this.value)"
+                                   oninput="this.classList.toggle('error', !this.value.trim())">
+                        </div>
+                        <button class="delete-btn" onclick="removeSidebarOption(${idx})">×</button>
+                    </div>
+                `,
+                    )
+                    .join("");
+            }
+
+            function addOptionToSidebar() {
+                if (currentOptGIdx === null || currentOptFIdx === null) return;
+
+                const field =
+                    data.project_meta_schema[currentOptGIdx].fields[
+                        currentOptFIdx
+                    ];
+                if (!field.options) field.options = [];
+
+                field.options.push({ value: "", label: "" });
+                saveToLocalStorage();
+                renderOptionsList();
+            }
+
+            function updateSidebarOption(optIdx, key, value) {
+                if (currentOptGIdx === null || currentOptFIdx === null) return;
+
+                data.project_meta_schema[currentOptGIdx].fields[
+                    currentOptFIdx
+                ].options[optIdx][key] = value;
+                saveToLocalStorage();
+            }
+
+            function removeSidebarOption(optIdx) {
+                if (currentOptGIdx === null || currentOptFIdx === null) return;
+
+                data.project_meta_schema[currentOptGIdx].fields[
+                    currentOptFIdx
+                ].options.splice(optIdx, 1);
+                saveToLocalStorage();
+                renderOptionsList();
+            }
+
+            // Option drag reorder with ghost and auto-scroll
+            let optGhost = null;
+            let optGhostOffsetY = 0;
+            let optAutoScrollSpeed = 0;
+            let optAutoScrollFrame = null;
+            let optPlaceholder = null;
+
+            function optAutoScroll() {
+                if (optAutoScrollSpeed !== 0) {
+                    const sidebarContent = document.querySelector(
+                        ".options-sidebar-content",
+                    );
+                    if (sidebarContent) {
+                        sidebarContent.scrollTop += optAutoScrollSpeed;
+                    }
+                    optAutoScrollFrame = requestAnimationFrame(optAutoScroll);
+                } else {
+                    cancelAnimationFrame(optAutoScrollFrame);
+                    optAutoScrollFrame = null;
+                }
+            }
+
+            function startOptDrag(e, optIdx) {
+                e.preventDefault();
+                const item = e.target.closest(".option-item");
+                const itemRect = item.getBoundingClientRect();
+
+                optDragState = {
+                    idx: optIdx,
+                    item: item,
+                    startY: e.clientY,
+                    itemRect: itemRect,
+                };
+
+                // Create ghost element
+                optGhost = item.cloneNode(true);
+                optGhost.style.position = "fixed";
+                optGhost.style.left = itemRect.left + "px";
+                optGhost.style.top = itemRect.top + "px";
+                optGhost.style.width = itemRect.width + "px";
+                optGhost.style.opacity = "0.8";
+                optGhost.style.pointerEvents = "none";
+                optGhost.style.zIndex = "2000";
+                optGhost.style.boxShadow = "0 8px 25px rgba(0,0,0,0.4)";
+                optGhost.style.transform = "scale(1.02)";
+                document.body.appendChild(optGhost);
+
+                optGhostOffsetY = e.clientY - itemRect.top;
+
+                // Create placeholder
+                optPlaceholder = document.createElement("div");
+                optPlaceholder.className = "option-item opt-placeholder";
+                optPlaceholder.style.height = itemRect.height + "px";
+                optPlaceholder.style.background = "rgba(59, 130, 246, 0.1)";
+                optPlaceholder.style.border = "2px dashed #3b82f6";
+                optPlaceholder.style.borderRadius = "8px";
+
+                item.classList.add("dragging");
+                item.parentNode.insertBefore(optPlaceholder, item.nextSibling);
+
+                document.addEventListener("mousemove", handleOptDragMove);
+                document.addEventListener("mouseup", handleOptDragEnd);
+            }
+
+            function handleOptDragMove(e) {
+                if (!optDragState || !optGhost) return;
+
+                // Update ghost position
+                optGhost.style.top = e.clientY - optGhostOffsetY + "px";
+
+                // Auto-scroll detection for sidebar content
+                const sidebarContent = document.querySelector(
+                    ".options-sidebar-content",
+                );
+                if (sidebarContent) {
+                    const contentRect = sidebarContent.getBoundingClientRect();
+                    const scrollThreshold = 50;
+                    const scrollSpeed = 8;
+
+                    if (
+                        e.clientY < contentRect.top + scrollThreshold &&
+                        e.clientY > contentRect.top
+                    ) {
+                        optAutoScrollSpeed = -scrollSpeed;
+                        if (!optAutoScrollFrame) optAutoScroll();
+                    } else if (
+                        e.clientY > contentRect.bottom - scrollThreshold &&
+                        e.clientY < contentRect.bottom
+                    ) {
+                        optAutoScrollSpeed = scrollSpeed;
+                        if (!optAutoScrollFrame) optAutoScroll();
+                    } else {
+                        optAutoScrollSpeed = 0;
+                    }
+                }
+
+                // Find drop position - only look within options-list
+                const optionsList = document.getElementById("options-list");
+                if (!optionsList) return;
+
+                const items = Array.from(
+                    optionsList.querySelectorAll(
+                        ".option-item:not(.dragging):not(.opt-placeholder)",
+                    ),
+                );
+
+                let insertBefore = null;
+                for (const item of items) {
+                    const rect = item.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    if (e.clientY < midY) {
+                        insertBefore = item;
+                        break;
+                    }
+                }
+
+                // Move placeholder within options-list only
+                if (
+                    optPlaceholder &&
+                    optPlaceholder.parentNode === optionsList
+                ) {
+                    if (insertBefore) {
+                        optionsList.insertBefore(optPlaceholder, insertBefore);
+                    } else {
+                        // Append to end of options-list
+                        optionsList.appendChild(optPlaceholder);
+                    }
+                }
+            }
+
+            function handleOptDragEnd(e) {
+                if (!optDragState) return;
+
+                // Stop auto-scroll
+                optAutoScrollSpeed = 0;
+                if (optAutoScrollFrame) {
+                    cancelAnimationFrame(optAutoScrollFrame);
+                    optAutoScrollFrame = null;
+                }
+
+                // Remove ghost
+                if (optGhost && optGhost.parentNode) {
+                    optGhost.parentNode.removeChild(optGhost);
+                    optGhost = null;
+                }
+
+                // Calculate new index based on placeholder position within options-list
+                const optionsList = document.getElementById("options-list");
+                const allItems = optionsList
+                    ? Array.from(
+                          optionsList.querySelectorAll(
+                              ".option-item, .opt-placeholder",
+                          ),
+                      )
+                    : [];
+                let newIdx = 0;
+                allItems.forEach((el, idx) => {
+                    if (el === optPlaceholder) {
+                        newIdx = idx;
+                    }
+                });
+
+                // Remove placeholder
+                if (optPlaceholder && optPlaceholder.parentNode) {
+                    optPlaceholder.parentNode.removeChild(optPlaceholder);
+                    optPlaceholder = null;
+                }
+
+                optDragState.item.classList.remove("dragging");
+
+                document.removeEventListener("mousemove", handleOptDragMove);
+                document.removeEventListener("mouseup", handleOptDragEnd);
+
+                // Adjust newIdx to account for the dragged item's original position
+                const originalIdx = optDragState.idx;
+                if (newIdx > originalIdx) {
+                    newIdx--;
+                }
+
+                // Reorder if changed
+                if (
+                    newIdx !== originalIdx &&
+                    currentOptGIdx !== null &&
+                    currentOptFIdx !== null
+                ) {
+                    const options =
+                        data.project_meta_schema[currentOptGIdx].fields[
+                            currentOptFIdx
+                        ].options;
+                    const [moved] = options.splice(originalIdx, 1);
+                    options.splice(newIdx, 0, moved);
+                    saveToLocalStorage();
+                    renderOptionsList();
+                }
+
+                optDragState = null;
             }
 
             // ===== Sidebar =====

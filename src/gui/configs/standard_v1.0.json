@@ -49,6 +49,14 @@
                     "show_in_overview": true
                 },
                 {
+                    "key": "end_date",
+                    "label": "檢測完成日期",
+                    "type": "date",
+                    "required": false,
+                    "show_in_overview": false,
+                    "remark": false
+                },
+                {
                     "key": "save_path",
                     "label": "存檔位置",
                     "type": "path_selector",
@@ -61,6 +69,38 @@
                     "required": true,
                     "show_in_overview": true,
                     "options": []
+                },
+                {
+                    "key": "customer",
+                    "label": "委測單位",
+                    "type": "text",
+                    "required": false,
+                    "show_in_overview": false,
+                    "remark": false
+                },
+                {
+                    "key": "address",
+                    "label": "委測單位地址",
+                    "type": "text",
+                    "required": false,
+                    "show_in_overview": false,
+                    "remark": false
+                },
+                {
+                    "key": "contact_person",
+                    "label": "委託單位聯絡人",
+                    "type": "text",
+                    "required": false,
+                    "show_in_overview": false,
+                    "remark": false
+                },
+                {
+                    "key": "contact_information",
+                    "label": "委託單位聯絡方式",
+                    "type": "textarea",
+                    "required": false,
+                    "show_in_overview": false,
+                    "remark": false
                 }
             ]
         },
