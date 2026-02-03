@@ -3,8 +3,9 @@
 類似 BorderedMainWindow，但繼承自 QDialog，保留 exec() 和 Accepted/Rejected 功能
 """
 
-from PySide6.QtCore import Qt, QEvent
-from PySide6.QtGui import QColor, QCursor
+from PySide6.QtCore import Qt, QEvent, QSize
+from PySide6.QtGui import QColor, QCursor, QIcon, QPixmap, QPainter
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QDialog,
     QWidget,
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from styles import Styles, THEME
+from gui.constants import ICON_PATH, CLOSE_ICON_PATH
 
 
 class DialogTitleBar(QWidget):
@@ -35,13 +37,41 @@ class DialogTitleBar(QWidget):
 
         # 按鈕 Layout
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 8, 0)
-        layout.setSpacing(4)
+        layout.setContentsMargins(8, 0, 8, 0)
+        layout.setSpacing(0)
+
+        # 應用程式圖標 (最左側) - 使用 QSvgRenderer 高品質渲染，支援高 DPI
+        from PySide6.QtWidgets import QApplication
+
+        self.app_icon_label = QLabel(self)
+        device_pixel_ratio = QApplication.primaryScreen().devicePixelRatio()
+        icon_size = 24
+        render_size = int(icon_size * device_pixel_ratio)
+
+        svg_renderer = QSvgRenderer(ICON_PATH)
+        app_icon_pixmap = QPixmap(render_size, render_size)
+        app_icon_pixmap.fill(Qt.transparent)
+        painter = QPainter(app_icon_pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        svg_renderer.render(painter)
+        painter.end()
+        app_icon_pixmap.setDevicePixelRatio(device_pixel_ratio)
+
+        self.app_icon_label.setPixmap(app_icon_pixmap)
+        self.app_icon_label.setFixedSize(28, 28)
+        self.app_icon_label.setAlignment(Qt.AlignCenter)
+        self.app_icon_label.setStyleSheet("background: transparent;")
+        layout.addWidget(self.app_icon_label)
+        layout.addSpacing(4)
+
         layout.addStretch()
 
-        # 對話框只需要關閉按鈕
-        self.btn_close = QPushButton("✕")
-        self.btn_close.setFixedSize(36, 36)
+        # 對話框只需要關閉按鈕 (使用 SVG 圖示)
+        self.btn_close = QPushButton()
+        self.btn_close.setIcon(QIcon(CLOSE_ICON_PATH))
+        self.btn_close.setFixedSize(32, 32)
+        self.btn_close.setIconSize(QSize(16, 16))
         self.btn_close.clicked.connect(parent_dialog.reject)  # 使用 reject 而非 close
 
         layout.addWidget(self.btn_close)
@@ -62,13 +92,23 @@ class DialogTitleBar(QWidget):
         if event.button() != Qt.LeftButton:
             return
 
+        # 檢查是否在縮放區域內，若是則讓父視窗處理
+        global_pos = event.globalPosition().toPoint()
+        dialog_pos = self.parent_dialog.mapFromGlobal(global_pos)
+        resize_dir = self.parent_dialog._get_resize_direction(dialog_pos)
+
+        if resize_dir:
+            # 在縮放區域內，將事件傳遞給父視窗處理
+            event.ignore()
+            return
+
         # 確保視窗已經有 windowHandle
         window_handle = self.parent_dialog.windowHandle()
         if window_handle:
             if window_handle.startSystemMove():
                 event.accept()
                 return
-        
+
         event.ignore()
 
 
@@ -315,6 +355,3 @@ if __name__ == "__main__":
         print("❌ 用戶按下取消或關閉視窗")
 
     sys.exit(0)
-
-
-

@@ -144,17 +144,24 @@ class OverviewPage(QWidget):
             if child.widget():
                 child.widget().deleteLater()
 
-        for field in schema:
-            if field.get("show_in_overview", False):
-                key = field["key"]
-                label_text = field["label"]
-                value = info_data.get(key, "-")
-                if isinstance(value, list):
-                    value = ", ".join(value)
-                val_label = QLabel(str(value))
-                val_label.setStyleSheet("font-weight: bold; color: #333;")
-                val_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                self.info_layout.addRow(f"{label_text}:", val_label)
+        for group in schema:
+            fields = group.get("fields", [])
+            for field in fields:
+                if field.get("show_in_overview", False):
+                    key = field["key"]
+                    label_text = field["label"]
+                    raw_value = info_data.get(key, "-")
+                    # 支援物件格式 {value, remark}
+                    if isinstance(raw_value, dict):
+                        value = raw_value.get("value", "-")
+                    else:
+                        value = raw_value
+                    if isinstance(value, list):
+                        value = ", ".join(value)
+                    val_label = QLabel(str(value))
+                    val_label.setStyleSheet("font-weight: bold; color: #333;")
+                    val_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                    self.info_layout.addRow(f"{label_text}:", val_label)
 
         for key, widget in self.photo_labels.items():
             # 判斷是否為狀態圓點（含 _status 後綴）
